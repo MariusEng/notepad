@@ -30,21 +30,23 @@ export function splitEol(text: string): { content: string; eol: Eol } {
 
 const isPristine = (t: Tab) => t.path === null && !t.dirty && t.content === "";
 
-function nextUntitledName(): string {
+/** "Untitled-3.sql": the number is the lowest one not used by an open untitled tab. */
+function nextUntitledName(language: LanguageId): string {
   const used = new Set(
     store()
-      .tabs.map((t) => /^Untitled-(\d+)\.md$/.exec(t.title)?.[1])
+      .tabs.filter((t) => t.path === null)
+      .map((t) => /^Untitled-(\d+)\./.exec(t.title)?.[1])
       .filter(Boolean)
       .map(Number),
   );
   let n = 1;
   while (used.has(n)) n++;
-  return `Untitled-${n}.md`;
+  return `Untitled-${n}.${LANGUAGES[language].extensions[0]}`;
 }
 
 /** Cmd/Ctrl+N: a new, empty Markdown document. */
-export function newTab() {
-  store().addTab(baseTab({ title: nextUntitledName(), language: "markdown" }));
+export function newTab(language: LanguageId = "markdown") {
+  store().addTab(baseTab({ title: nextUntitledName(language), language }));
 }
 
 /** Opens files (or shows the Open dialog). Already-open files are focused instead. */
@@ -164,9 +166,15 @@ export async function reloadTab(id: string) {
   }
 }
 
+/** Changes the file type. An untitled tab also gets the new extension ("Untitled-2.md" → "Untitled-2.sql"),
+ *  so Save As suggests the right name. A saved file keeps its name and path. */
 export function setLanguage(id: string, language: LanguageId) {
   const tab = store().tabs.find((t) => t.id === id);
-  if (tab && tab.language !== language) store().replaceContent(id, tab.content, { language });
+  if (!tab || tab.language === language) return;
+  const patch: Partial<Tab> = { language };
+  const untitled = tab.path === null && /^(Untitled-\d+)\.[^.]*$/.exec(tab.title);
+  if (untitled) patch.title = `${untitled[1]}.${LANGUAGES[language].extensions[0]}`;
+  store().replaceContent(id, tab.content, patch);
 }
 
 export function toggleEol(id: string) {

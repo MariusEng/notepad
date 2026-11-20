@@ -291,6 +291,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &item("new", "New", Some("CmdOrCtrl+N"))?,
+            &item("new_of_type", "New File of Type…", Some("CmdOrCtrl+Shift+N"))?,
             &item("open", "Open…", Some("CmdOrCtrl+O"))?,
             &PredefinedMenuItem::separator(app)?,
             &item("save", "Save", Some("CmdOrCtrl+S"))?,

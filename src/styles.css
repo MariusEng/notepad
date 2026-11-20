@@ -345,3 +345,61 @@ select {
   opacity: 0.35;
   cursor: default;
 }
+
+/* ---------- new-file type picker ---------- */
+
+.picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 14vh;
+}
+.picker {
+  width: min(380px, calc(100vw - 32px));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.picker-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.picker-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+  cursor: default;
+}
+.picker-item.sel {
+  background: var(--bg-hover);
+}
+.picker-ext {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.picker-empty {
+  padding: 8px 10px;
+  color: var(--faint);
+}

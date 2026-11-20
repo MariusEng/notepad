@@ -10,7 +10,8 @@ the features, shortcuts and file layout.
   the View menu) and is greyed out for non-Markdown files and Markdown source view; the floating
   selection toolbar and `/` menu also stay. Markdown has minimal padding (full width, 14px), like
   the code editor, so the block drag handle is hidden.
-- Cmd+N creates a new `.md` tab. Files are saved as real Markdown, never as rich text.
+- Cmd+N creates a new `.md` tab; Cmd+Shift+N (`TypePicker.tsx`) asks for the type first. Right-click on a
+  tab → File Type changes it (untitled tabs also get the new extension). Files are saved as real Markdown, never as rich text.
 - Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown.
 - Hot exit: closing the app never prompts; tabs and unsaved edits are restored on launch.
 - Tab switching is Ctrl+Tab on all platforms. The user asked for Cmd+Tab, but macOS reserves it for

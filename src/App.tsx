@@ -5,6 +5,7 @@ import { StatusBar } from "./StatusBar";
 import { Banner } from "./Banner";
 import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
+import { TypePicker } from "./TypePicker";
 import { FormatBar } from "./FormatBar";
 import { useTabs } from "./tabs/store";
 
@@ -32,6 +33,7 @@ export function App() {
           ))}
       </main>
       <StatusBar />
+      <TypePicker />
       {notice && (
         <div className={`toast ${notice.kind}`} role="status">
           {notice.text}

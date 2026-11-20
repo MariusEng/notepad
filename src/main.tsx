@@ -9,6 +9,7 @@ import { initTheme } from "./theme/theme";
 import { loadSettings, useSettings } from "./settings";
 import { installKeymap } from "./keymap";
 import { closeTab, formatActive, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource } from "./actions";
+import { openTypePicker } from "./TypePicker";
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
@@ -23,7 +24,8 @@ async function quit() {
 }
 
 const MENU: Record<string, () => unknown> = {
-  new: newTab,
+  new: () => newTab(),
+  new_of_type: openTypePicker,
   open: () => openFiles(),
   save: () => saveTab(),
   save_as: () => saveTabAs(),

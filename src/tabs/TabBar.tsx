@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Menu } from "@tauri-apps/api/menu";
-import { closeOtherTabs, closeTab, newTab, saveTab } from "../actions";
+import { closeOtherTabs, closeTab, newTab, saveTab, setLanguage } from "../actions";
+import { LANGUAGE_LIST } from "../editors/languages";
 import { useTabs, type Tab } from "./store";
 
 async function showTabMenu(tab: Tab) {
@@ -9,6 +10,17 @@ async function showTabMenu(tab: Tab) {
       { id: "close", text: "Close", action: () => closeTab(tab.id) },
       { id: "close-others", text: "Close Others", action: () => closeOtherTabs(tab.id) },
       { id: "close-right", text: "Close to the Right", action: () => closeOtherTabs(tab.id, true) },
+      { item: "Separator" },
+      {
+        id: "file-type",
+        text: "File Type",
+        items: LANGUAGE_LIST.map((l) => ({
+          id: `type-${l.id}`,
+          text: l.label,
+          checked: l.id === tab.language,
+          action: () => setLanguage(tab.id, l.id),
+        })),
+      },
       { item: "Separator" },
       { id: "save", text: "Save", action: () => saveTab(tab.id) },
       {
@@ -101,7 +113,7 @@ export function TabBar() {
           </div>
         ))}
       </div>
-      <button className="tab-new" aria-label="New tab" title="New (⌘N / Ctrl+N)" onClick={() => newTab()}>
+      <button className="tab-new" aria-label="New tab" title="New (⌘N · Ctrl+N). New file of type: ⇧⌘N · Ctrl+Shift+N" onClick={() => newTab()}>
         <svg viewBox="0 0 16 16" aria-hidden>
           <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>

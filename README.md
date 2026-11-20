@@ -25,7 +25,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   - PowerShell: `Install-Module PSScriptAnalyzer` (in `pwsh`)
 - **Hot exit**: close the app at any time. Open tabs, unsaved edits and untitled documents
   are restored on the next launch, with cursor and scroll position.
-- **Tabs**: drag to reorder, middle-click to close, right-click for more.
+- **Tabs**: drag to reorder, middle-click to close, right-click for more, including **File Type**
+  to change the type of a tab (an untitled file also gets the new extension).
+- **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.
 - **Changes from other programs**: clean tabs reload automatically when the file changes on disk.
   If you have unsaved edits, a banner lets you choose which version to keep.
 - **Light and dark themes** follow the OS, or can be fixed under **View → Theme**.
@@ -36,6 +38,7 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 | Action | macOS | Windows / Linux |
 |---|---|---|
 | New Markdown document | ⌘N | Ctrl+N |
+| New file of a chosen type | ⇧⌘N | Ctrl+Shift+N |
 | Open / Save / Save As | ⌘O / ⌘S / ⇧⌘S | Ctrl+O / Ctrl+S / Ctrl+Shift+S |
 | Close tab | ⌘W | Ctrl+W |
 | Next / previous tab | Ctrl+Tab / Ctrl+Shift+Tab, ⇧⌘] / ⇧⌘[ | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / Ctrl+PgUp |
