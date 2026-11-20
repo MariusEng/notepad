@@ -39,6 +39,8 @@ export interface EditorHandle {
   find(): void;
   /** Replace the whole document as one undoable edit. Returns false if unsupported. */
   replaceAll(text: string): boolean;
+  /** Big documents copy their text into the tab store lazily; this does it now. */
+  flush?(): void;
 }
 
 // One handle per mounted editor (there are two while the view is split).
@@ -59,3 +61,6 @@ export const activeEditor = () => {
   const id = useTabs.getState().activeId;
   return id ? editors.get(id) ?? null : null;
 };
+
+/** Makes every tab's `content` current (call before reading it to save, format, write the session…). */
+export const flushEdits = () => editors.forEach((e) => e.flush?.());

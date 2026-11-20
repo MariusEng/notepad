@@ -7,10 +7,13 @@ import { TypePicker } from "./TypePicker";
 import { FormatBar } from "./FormatBar";
 import { Sidebar } from "./git/Sidebar";
 import { GitDialogs } from "./git/Dialogs";
+import { AboutDialog } from "./About";
 import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
+import { HtmlPreview } from "./editors/HtmlPreview";
 import { editorFor } from "./editors/handle";
 import { useTabs } from "./tabs/store";
+import { formatSize } from "./lib/backend";
 
 export function App() {
   const tab = useTabs((s) => s.tabs.find((t) => t.id === s.activeId));
@@ -47,6 +50,7 @@ export function App() {
       <StatusBar />
       <TypePicker />
       <GitDialogs />
+      <AboutDialog />
       {notice && (
         <div className={`toast ${notice.kind}`} role="status">
           {notice.text}
@@ -79,14 +83,33 @@ function Pane({ id, split }: { id: string; split: boolean }) {
       <Banner tab={tab} />
       <div className="pane-body">
         <div className="pane-fill">
-          {tab.language === "markdown" && !tab.mdSource ? (
+          {tab.loading ? (
+            <Loading name={tab.title} {...tab.loading} />
+          ) : tab.language === "markdown" && !tab.mdSource ? (
             <MarkdownEditor key={`md:${tab.id}:${tab.version}`} tab={tab} />
+          ) : tab.language === "html" && !tab.mdSource ? (
+            <HtmlPreview key={`html:${tab.id}`} tab={tab} />
           ) : (
             <CodeEditor key={`cm:${tab.id}:${tab.version}:${tab.language}`} tab={tab} />
           )}
         </div>
       </div>
     </section>
+  );
+}
+
+/** Shown while a big file streams in from disk. */
+function Loading({ name, loaded, total }: { name: string; loaded: number; total: number }) {
+  const pct = total ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+  return (
+    <div className="loading" role="status">
+      <div className="loading-text">
+        Loading {name}… {formatSize(loaded)} of {formatSize(total)}
+      </div>
+      <div className="loading-bar">
+        <div style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 

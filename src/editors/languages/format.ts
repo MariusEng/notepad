@@ -1,6 +1,6 @@
 import { backend } from "../../lib/backend";
 import type { LanguageId } from ".";
-import { FormatError, formatIni, formatSql, formatJson, formatMarkdown, formatYaml, tidyWhitespace } from "./formatters";
+import { FormatError, formatIni, formatSql, formatJson, formatMarkdown, formatYaml, formatJavaScript, formatHtml, tidyWhitespace } from "./formatters";
 
 export { FormatError };
 
@@ -13,6 +13,10 @@ export async function formatText(language: LanguageId, text: string): Promise<st
       return formatYaml(text);
     case "markdown":
       return formatMarkdown(text);
+    case "javascript":
+      return formatJavaScript(text);
+    case "html":
+      return formatHtml(text);
     case "ini":
       return formatIni(text);
     case "shell":
@@ -27,6 +31,9 @@ export async function formatText(language: LanguageId, text: string): Promise<st
       return formatSql(text, "postgresql");
     case "tsql":
       return formatSql(text, "transactsql");
+    case "csv":
+    case "log":
+      throw new FormatError(`${language === "csv" ? "CSV" : "Log"} files are left as they are`);
     case "batch":
     case "plaintext":
       return tidyWhitespace(text);

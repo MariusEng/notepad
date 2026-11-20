@@ -12,7 +12,12 @@ the features, shortcuts and file layout.
   the code editor, so the block drag handle is hidden.
 - Cmd+N creates a new `.md` tab; Cmd+Shift+N (`TypePicker.tsx`) asks for the type first. Right-click on a
   tab → File Type changes it (untitled tabs also get the new extension). Files are saved as real Markdown, never as rich text.
-- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown.
+- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown,
+  JavaScript, HTML (preview ⇄ source with ⌘/, like Markdown), CSV and log (each column keeps its own colour).
+- Really large files: never freeze; stream in with progress in the tab. Tabs can be dragged; split-view pairs stay
+  together. Git supports branches (repos that refuse pushes to main/master). The repo sidebar can be hidden.
+- Help → Notepad Help (`src/help.md`, opens in a tab) and an About dialog listing open source components and that
+  the app is built with Claude. Keep both up to date when features or dependencies change.
 - Hot exit: closing the app never prompts; tabs and unsaved edits are restored on launch.
 - Tab switching is Ctrl+Tab on all platforms. The user asked for Cmd+Tab, but macOS reserves it for
   the app switcher and the app can't receive it; the user was told this.
@@ -58,6 +63,20 @@ the features, shortcuts and file layout.
   mock HTTP server. NOT verified against real providers: OAuth for Forgejo/Bitbucket/Azure, Azure Bearer-header git
   auth, Bitbucket app-password flows, and helper lookups on macOS/Windows.
 
+- Big files (0.6.0): `backend.readText` reads in 16 MB raw-byte chunks (`file_stat` + `read_file_range`, no JSON);
+  files > 4 MB open as a placeholder tab with `loading` progress (`actions.loadFileInto`), also on session restore
+  and external reload. Cap 512 MB (whole text is in memory: CodeMirror + store). CodeEditor copies big docs
+  (> 2 M chars) into the store only when typing pauses; call `flushEdits()` (editors/handle.ts) before reading
+  `tab.content` (save, format, session write, toggles). Markdown > 1 MB opens in source view.
+- Tab order: the split pair (mainId, splitId) is kept adjacent by `pairUp` in tabs/store.ts; the tab bar drags
+  groups with pointer events (HTML5 DnD doesn't work while `dragDropEnabled` is on).
+- CSV/log colouring (`editors/languages/columns.ts`) decorates only visible lines; `LanguageInfo.load(doc)` gets
+  the initial text so it can detect the CSV delimiter / log columns. Colours are `--col-0..7`, `--log-*` tokens.
+- Git branches: `list_branches`, `switch_branch` (safe checkout, refuses to overwrite local changes),
+  `create_branch`, `move_to_new_branch` in gitops.rs. Sync fetches all branches (with prune). A refused push
+  returns `PUSH_REJECTED:<branch>:<reason>` → dialog offering to move the commits to a new branch + pull request
+  link (`pullRequestUrl` in git/types.ts; per-provider URL formats are untested against real servers).
+
 ## Gotchas found so far
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
@@ -79,8 +98,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20, version 0.5.1)
-Latest (0.5.1): GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-20, version 0.6.0)
+Latest (0.6.0): tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown
@@ -93,13 +112,9 @@ with seeded session files); formatters tested in Node; Rust unit tests pass.
 Not yet verified by eye: overall look, Ctrl+Tab in WKWebView, Crepe dark-mode details,
 narrow-window layout. The user is reviewing the UI.
 
-Unpushed: commits 1421305, 52abf60, 596f30c, 1c28c2c, aafeabe, 519f3ae (file type, 0.2-0.5.1). Push from the
-user's terminal over HTTPS (the cloud sandbox can't reach git.1011.no).
-
-Not compiled or run on the Mac yet: the Tauri wiring in `lib.rs` for the git commands/menu (the git modules
-themselves compile and pass 12 tests in a Linux sandbox with a stub `tauri` crate). First step next session:
-`cd src-tauri && cargo test`, `npm run typecheck`, `npm run tauri dev`. The first Rust build is slow (libgit2 +
-vendored OpenSSL).
+Compiled on the Mac (0.6.0): `cargo test` passes 16 tests (incl. branches), `npm run typecheck` and `npm run build`
+are clean. Not yet run with `npm run tauri dev` this session: check tab dragging, the branch menu, the HTML
+preview, CSV/log colours and a big file (e.g. a 200 MB log) by eye.
 
 Untested against real servers: browser sign-in on git.1011.no (Forgejo built-in client id
 a4792ccc-144e-407e-86c9-5e7d8d9c3269, redirect http://127.0.0.1:51789), GitHub device flow with the GitHub CLI

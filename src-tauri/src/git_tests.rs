@@ -107,6 +107,66 @@ fn pull_merge_and_conflict() {
 }
 
 #[test]
+fn branches_create_switch_and_move_commits() {
+    let remote = Remote::new();
+    let (_da, a) = remote.clone_to("a");
+    save(&a, "a.md", "one\n");
+    assert_eq!(gitops::sync(&a).unwrap().state, "pushed");
+    let main = gitops::info(&a).unwrap().branch.unwrap();
+
+    // A new branch is published on the first sync.
+    let info = gitops::create_branch(&a, "feature").unwrap();
+    assert_eq!(info.branch.as_deref(), Some("feature"));
+    assert!(gitops::create_branch(&a, "feature").is_err());
+    assert!(gitops::create_branch(&a, "bad name..").is_err());
+    save(&a, "f.md", "feature\n");
+    assert_eq!(gitops::sync(&a).unwrap().state, "pushed");
+    let bare = Repository::open(&remote.bare).unwrap();
+    assert!(bare.find_reference("refs/heads/feature").is_ok());
+
+    // Another clone sees it as a remote branch and can switch to it.
+    let (_db, b) = remote.clone_to("b");
+    let list = gitops::list_branches(&b).unwrap();
+    assert!(list[0].current && list[0].name == main);
+    let f = list.iter().find(|x| x.name == "feature").unwrap();
+    assert!(f.remote && !f.local);
+    assert_eq!(gitops::info(&b).unwrap().default_branch.as_deref(), Some(main.as_str()));
+    let info = gitops::switch_branch(&b, "feature").unwrap();
+    assert_eq!(info.branch.as_deref(), Some("feature"));
+    assert_eq!(read(&b, "f.md"), "feature\n");
+    assert_eq!(info.ahead, 0);
+    gitops::switch_branch(&b, &main).unwrap();
+    assert!(!Path::new(&b).join("f.md").exists());
+
+    // Unsaved-to-git edits that the switch would overwrite: refused, nothing changes.
+    write(&b, "a.md", "local edit\n");
+    gitops::switch_branch(&b, "feature").unwrap(); // a.md is the same on both branches: fine
+    write(&a, "f.md", "feature 2\n");
+    save(&a, "f.md", "feature 2\n");
+    gitops::sync(&a).unwrap();
+    gitops::sync(&b).unwrap();
+    write(&b, "f.md", "mine\n");
+    assert!(gitops::switch_branch(&b, &main).is_err());
+    assert_eq!(gitops::info(&b).unwrap().branch.as_deref(), Some("feature"));
+    assert_eq!(read(&b, "f.md"), "mine\n");
+
+    // Commits made on a branch the server refuses can be moved to a new branch.
+    gitops::switch_branch(&a, &main).unwrap();
+    save(&a, "a.md", "two\n");
+    assert_eq!(gitops::info(&a).unwrap().ahead, 1);
+    let info = gitops::move_to_new_branch(&a, "edits").unwrap();
+    assert_eq!(info.branch.as_deref(), Some("edits"));
+    assert_eq!(read(&a, "a.md"), "two\n");
+    let repo = Repository::open(&a).unwrap();
+    assert_eq!(
+        repo.refname_to_id(&format!("refs/heads/{main}")).unwrap(),
+        repo.refname_to_id(&format!("refs/remotes/origin/{main}")).unwrap()
+    );
+    assert_eq!(gitops::sync(&a).unwrap().state, "pushed");
+    assert!(bare.find_reference("refs/heads/edits").is_ok());
+}
+
+#[test]
 fn only_the_saved_file_is_committed() {
     let remote = Remote::new();
     let (_d, a) = remote.clone_to("a");

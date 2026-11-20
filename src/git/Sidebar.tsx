@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { git } from "../lib/backend";
 import { useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
-import { closeRepo, joinPath, openRepoFile } from "./actions";
+import { joinPath, openRepoFile, showBranchMenu, toggleSidebar } from "./actions";
 import { useGit } from "./store";
 import type { DirEntry } from "./types";
 
@@ -14,12 +14,15 @@ export function Sidebar() {
   return (
     <aside className="sidebar" aria-label="Repository">
       <div className="sb-head">
-        <span className="sb-repo" title={repo.root}>
-          {repo.name}
-        </span>
-        {repo.branch && <span className="sb-branch">{repo.branch}</span>}
-        <button className="sb-x" title="Close repository" aria-label="Close repository" onClick={closeRepo}>
-          ×
+        <button className="sb-title" title={`${repo.root}\nBranches, pull request, close repository`} onClick={() => void showBranchMenu()}>
+          <span className="sb-repo">{repo.name}</span>
+          <span className="sb-branch">{repo.branch ?? "(no branch)"} ▾</span>
+        </button>
+        <button className="sb-x" title="Hide sidebar (⇧⌘E · Ctrl+Shift+E)" aria-label="Hide sidebar" onClick={toggleSidebar}>
+          <svg viewBox="0 0 16 16" aria-hidden>
+            <rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
         </button>
       </div>
       <div className="sb-tree" role="tree">

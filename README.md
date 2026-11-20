@@ -13,12 +13,18 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   A fixed formatting bar sits under the tabs (hide it under **View → Show/Hide Formatting Bar**);
   it is greyed out for non-Markdown files and in the Markdown source view.
   **⌘/** (Ctrl+/) toggles the raw Markdown source.
-- **Syntax highlighting** for PowerShell, Perl, shell, batch (`.bat`/`.cmd`), INI, YAML, JSON,
+- **HTML** opens in a sandboxed preview (no scripts); **⌘/** switches to the source and back.
+- **Syntax highlighting** for JavaScript, HTML, PowerShell, Perl, shell, batch (`.bat`/`.cmd`), INI, YAML, JSON,
   SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. For `.sql` files the dialect is guessed
   from the content (e.g. `GO`, `@vars`, `[brackets]` → T-SQL; `$$`, `::`, `RETURNING` → PostgreSQL)
   and can be changed in the status bar. The language comes from the file extension or shebang, and can be changed
   in the status bar.
-- **Format Document** (⇧⌥F / Shift+Alt+F): JSON, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
+- **CSV and log files** colour each column, so values that belong together share a colour on every line.
+  CSV detects the delimiter (`,` `;` tab `|`) and bolds the header; logs detect their leading columns
+  (timestamp, level, [thread], logger…) and tint error and warning lines.
+- **Big files** (over 4 MB) stream in with a progress bar in the tab, so the app never freezes; up to 512 MB.
+  Big Markdown files (over 1 MB) open in the source view.
+- **Format Document** (⇧⌥F / Shift+Alt+F): JavaScript, HTML, JSON, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
   use external tools if they are installed:
   - shell: `brew install shfmt`
   - Perl: `brew install perltidy`
@@ -37,7 +43,10 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   (access token, or **Sign in with browser**: one click on github.com (device code) and on Forgejo/Gitea servers (built-in OAuth app for git tools); other providers use an OAuth app you register: device code for GitHub/GitLab).
   Credentials are looked up in the app's own account store (OS keychain), then in your git credential manager.
   Only HTTPS remotes are supported. View → *Auto Commit & Push on Save* turns the automatic commit off.
-- **Tabs**: drag to reorder, middle-click to close, right-click for more, including **File Type**
+- **Branches**: click the repository name (sidebar) or the branch (status bar) to switch branch, create one,
+  or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
+  unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
+- **Tabs**: drag to reorder (the two tabs of a split view stay together and move as one), middle-click to close, right-click for more, including **File Type**
   to change the type of a tab (an untitled file also gets the new extension).
 - **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.
 - **Changes from other programs**: clean tabs reload automatically when the file changes on disk.
@@ -57,7 +66,8 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 | Go to tab 1–8 / last tab | ⌘1–⌘8 / ⌘9 | Ctrl+1–Ctrl+8 / Ctrl+9 |
 | Find | ⌘F | Ctrl+F |
 | Format Document | ⇧⌥F | Shift+Alt+F |
-| Toggle Markdown source | ⌘/ | Ctrl+/ |
+| Toggle source (Markdown, HTML) | ⌘/ | Ctrl+/ |
+| Show/hide repository sidebar | ⇧⌘E | Ctrl+Shift+E |
 
 ⌘Tab is not used because macOS reserves it for switching apps, and the app never receives it.
 
@@ -88,7 +98,10 @@ src/
     mdFormat.ts         formatting commands used by the formatting bar
     CodeEditor.tsx      CodeMirror 6
     cmTheme.ts          CodeMirror theme built on CSS variables
-    languages/          language registry, batch mode, formatters
+    HtmlPreview.tsx     sandboxed HTML preview
+    languages/          language registry, batch mode, formatters, CSV/log column colouring (columns.ts)
+  help.md               Help → Notepad Help (opens in a tab)
+  About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
 src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone

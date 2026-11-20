@@ -1,6 +1,8 @@
 import { message, open, save } from "@tauri-apps/plugin-dialog";
-import { backend } from "./lib/backend";
-import { LANGUAGES, detectLanguage, fileName, type LanguageId } from "./editors/languages";
+import helpText from "./help.md?raw";
+import { LARGE_FILE_BYTES, backend } from "./lib/backend";
+import { activeEditor, flushEdits } from "./editors/handle";
+import { LANGUAGES, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
 import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
 
 const store = () => useTabs.getState();
@@ -46,7 +48,7 @@ function nextUntitledName(language: LanguageId): string {
 
 /** Cmd/Ctrl+N: a new, empty Markdown document. */
 export function newTab(language: LanguageId = "markdown") {
-  store().addTab(baseTab({ title: nextUntitledName(language), language }));
+  store().addTab(baseTab({ title: nextUntitledName(language), language, mdSource: language === "html" }));
 }
 
 /** Opens files (or shows the Open dialog). Already-open files are focused instead. */
@@ -63,6 +65,17 @@ export async function openFiles(paths?: string[]) {
       continue;
     }
     try {
+      const size = await backend.fileSize(path);
+      // Opening a file into a fresh window replaces the empty "Untitled" tab.
+      const cur = activeTab();
+      const replaceId = cur && isPristine(cur) ? cur.id : undefined;
+      if (size > LARGE_FILE_BYTES) {
+        // Big file: the tab appears at once and shows progress while the text streams in.
+        const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path), loading: { loaded: 0, total: size } });
+        store().addTab(tab, { replaceId });
+        void loadFileInto(tab.id, path);
+        continue;
+      }
       const file = await backend.readFile(path);
       const { content, eol } = splitEol(file.content);
       const tab = baseTab({
@@ -74,12 +87,47 @@ export async function openFiles(paths?: string[]) {
         bom: file.bom,
         mtime: file.mtime,
       });
-      // Opening a file into a fresh window replaces the empty "Untitled" tab.
-      const cur = activeTab();
-      store().addTab(tab, { replaceId: cur && isPristine(cur) ? cur.id : undefined });
+      if (tab.language === "markdown" && content.length > MD_FORMATTED_MAX) tab.mdSource = true;
+      store().addTab(tab, { replaceId });
     } catch (e) {
       store().notify(`Could not open ${fileName(path)}: ${e}`, "error");
     }
+  }
+}
+
+/** Markdown this big is shown as source: the formatted editor would be far too slow. */
+const MD_FORMATTED_MAX = 1024 * 1024;
+
+/**
+ * Reads a file into an existing tab in chunks, showing progress in the tab (`loading`). Used for big files
+ * when opening, restoring the session and reloading. Stops if the tab is closed meanwhile.
+ */
+export async function loadFileInto(id: string, path: string) {
+  const alive = () => store().tabs.some((t) => t.id === id && t.path === path);
+  try {
+    const file = await backend.readText(path, (loaded, total) => {
+      if (!alive()) return false;
+      store().update(id, { loading: { loaded, total } });
+      return true;
+    });
+    if (!file || !alive()) return;
+    const { content, eol } = splitEol(file.content);
+    const language = detectLanguage(path, content.slice(0, 20000));
+    store().replaceContent(id, content, {
+      eol,
+      bom: file.bom,
+      mtime: file.mtime,
+      dirty: false,
+      external: undefined,
+      loading: undefined,
+      language,
+      ...(language === "markdown" && content.length > MD_FORMATTED_MAX ? { mdSource: true } : {}),
+    });
+  } catch (e) {
+    if (!alive()) return;
+    store().notify(`Could not open ${fileName(path)}: ${e}`, "error");
+    store().removeTab(id);
+    if (store().tabs.length === 0) newTab();
   }
 }
 
@@ -87,8 +135,9 @@ const toDisk = (t: Tab) => (t.eol === "\r\n" ? t.content.replace(/\n/g, "\r\n") 
 
 /** Saves the tab; untitled tabs go through Save As. Returns false if cancelled or failed. */
 export async function saveTab(id = store().activeId): Promise<boolean> {
+  flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab) return false;
+  if (!tab || tab.loading) return false;
   if (!tab.path) return saveTabAs(tab.id);
   try {
     const mtime = await backend.writeFile(tab.path, toDisk(tab), tab.bom);
@@ -105,8 +154,9 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
 }
 
 export async function saveTabAs(id = store().activeId): Promise<boolean> {
+  flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab) return false;
+  if (!tab || tab.loading) return false;
   const lang = LANGUAGES[tab.language];
   const path = await save({
     title: "Save As",
@@ -159,6 +209,10 @@ export async function closeOtherTabs(keepId: string, onlyRight = false) {
 export async function reloadTab(id: string) {
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab?.path) return;
+  if ((await backend.fileSize(tab.path).catch(() => 0)) > LARGE_FILE_BYTES) {
+    store().update(id, { loading: { loaded: 0, total: 1 } });
+    return loadFileInto(id, tab.path);
+  }
   try {
     const file = await backend.readFile(tab.path);
     const { content, eol } = splitEol(file.content);
@@ -171,9 +225,11 @@ export async function reloadTab(id: string) {
 /** Changes the file type. An untitled tab also gets the new extension ("Untitled-2.md" → "Untitled-2.sql"),
  *  so Save As suggests the right name. A saved file keeps its name and path. */
 export function setLanguage(id: string, language: LanguageId) {
+  flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.language === language) return;
   const patch: Partial<Tab> = { language };
+  if (language === "html") patch.mdSource = true; // edit first; the preview is one ⌘/ away
   const untitled = tab.path === null && /^(Untitled-\d+)\.[^.]*$/.exec(tab.title);
   if (untitled) patch.title = `${untitled[1]}.${LANGUAGES[language].extensions[0]}`;
   store().replaceContent(id, tab.content, patch);
@@ -184,17 +240,19 @@ export function toggleEol(id: string) {
   if (tab) store().update(id, { eol: tab.eol === "\n" ? "\r\n" : "\n", dirty: true });
 }
 
-export function toggleMarkdownSource(id = store().activeId) {
+/** Markdown: formatted editor ⇄ source. HTML: preview ⇄ source. (⌘/ · Ctrl+/) */
+export function toggleSource(id = store().activeId) {
+  flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (tab?.language === "markdown") store().update(tab.id, { mdSource: !tab.mdSource, scroll: 0 });
+  if (tab && hasRenderedView(tab.language)) store().update(tab.id, { mdSource: !tab.mdSource, scroll: 0 });
 }
 
 /** Format Document (⇧⌥F). In code editors it is a single undoable edit. */
 export async function formatActive() {
+  flushEdits();
   const tab = activeTab();
-  if (!tab) return;
+  if (!tab || tab.loading) return;
   const { formatText, FormatError } = await import("./editors/languages/format");
-  const { activeEditor } = await import("./editors/handle");
   try {
     const formatted = await formatText(tab.language, tab.content);
     if (formatted === tab.content) {
@@ -205,4 +263,12 @@ export async function formatActive() {
   } catch (e) {
     store().notify(e instanceof FormatError ? e.message : `Format failed: ${e}`, "error");
   }
+}
+
+/** Help → Notepad Help: the help text in its own tab (focused if it is already open). */
+export function openHelp() {
+  const title = "Notepad Help.md";
+  const open = store().tabs.find((t) => t.path === null && t.title === title);
+  if (open) return store().setActive(open.id);
+  store().addTab(baseTab({ title, language: "markdown", content: helpText }));
 }

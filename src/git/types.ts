@@ -7,6 +7,17 @@ export interface RepoInfo {
   remoteUrl: string | null;
   ahead: number;
   behind: number;
+  /** The remote's main branch (target for pull requests). */
+  defaultBranch: string | null;
+}
+
+export interface BranchInfo {
+  name: string;
+  current: boolean;
+  /** Exists as a local branch. */
+  local: boolean;
+  /** Exists on the remote (as of the last sync). */
+  remote: boolean;
 }
 
 export interface DirEntry {
@@ -182,5 +193,32 @@ export function hostOf(baseUrl: string): string {
     return new URL(baseUrl).host.toLowerCase();
   } catch {
     return baseUrl.trim().toLowerCase();
+  }
+}
+
+/** Web page for opening a pull/merge request from `branch` into `base`, or null if unknown. */
+export function pullRequestUrl(remoteUrl: string, provider: ProviderKind, branch: string, base: string): string | null {
+  let web: string;
+  try {
+    const u = new URL(remoteUrl);
+    u.username = "";
+    u.password = "";
+    web = u.toString().replace(/\/+$/, "").replace(/\.git$/, "");
+  } catch {
+    return null;
+  }
+  const path = (b: string) => b.split("/").map(encodeURIComponent).join("/");
+  const q = encodeURIComponent;
+  switch (provider) {
+    case "github":
+      return `${web}/compare/${path(base)}...${path(branch)}?expand=1`;
+    case "gitlab":
+      return `${web}/-/merge_requests/new?merge_request%5Bsource_branch%5D=${q(branch)}&merge_request%5Btarget_branch%5D=${q(base)}`;
+    case "forgejo":
+      return `${web}/compare/${path(base)}...${path(branch)}`;
+    case "bitbucket":
+      return `${web}/pull-requests/new?source=${q(branch)}&dest=${q(base)}`;
+    case "azure":
+      return `${web}/pullrequestcreate?sourceRef=${q(branch)}&targetRef=${q(base)}`;
   }
 }

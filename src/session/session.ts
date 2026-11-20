@@ -1,7 +1,8 @@
-import { backend } from "../lib/backend";
-import { splitEol } from "../actions";
+import { LARGE_FILE_BYTES, backend } from "../lib/backend";
+import { loadFileInto, splitEol } from "../actions";
+import { flushEdits } from "../editors/handle";
 import { LANGUAGES, type LanguageId } from "../editors/languages";
-import { useTabs, type Eol, type Tab } from "../tabs/store";
+import { pairUp, useTabs, type Eol, type Tab } from "../tabs/store";
 
 /**
  * "Hot exit": the app can be closed at any time without prompts.
@@ -46,6 +47,7 @@ let restored = false;
 const needsBuffer = (t: Tab) => t.dirty || (t.path === null && t.content !== "");
 
 async function writeSession() {
+  flushEdits();
   const { tabs, activeId, mainId, splitId } = useTabs.getState();
   const keep: string[] = [];
   for (const t of tabs) {
@@ -92,10 +94,15 @@ export function saveSessionNow(): Promise<void> {
 
 function scheduleSave() {
   clearTimeout(timer);
-  timer = setTimeout(saveSessionNow, 800);
+  // Big unsaved buffers are written less often (each write sends the whole text).
+  const big = useTabs.getState().tabs.some((t) => needsBuffer(t) && t.content.length > 4_000_000);
+  timer = setTimeout(saveSessionNow, big ? 5000 : 800);
 }
 
 /** Restores the previous session's tabs. Returns false if there was nothing to restore. */
+/** Big clean files from the restored session, loaded once the window is up. */
+const bigFiles: [string, string][] = [];
+
 export async function restoreSession(): Promise<boolean> {
   let session: Session | null = null;
   try {
@@ -127,7 +134,13 @@ export async function restoreSession(): Promise<boolean> {
           else if (s.mtime !== null && mtime > s.mtime) base.external = "modified";
         }
       } else if (s.path) {
-        // Clean file tab: always load the current version from disk.
+        // Clean file tab: always load the current version from disk. Big files stream in after startup.
+        if ((await backend.fileSize(s.path)) > LARGE_FILE_BYTES) {
+          base.loading = { loaded: 0, total: 1 };
+          bigFiles.push([s.id, s.path]);
+          tabs.push(base);
+          continue;
+        }
         const file = await backend.readFile(s.path);
         const { content, eol } = splitEol(file.content);
         Object.assign(base, { content, eol, bom: file.bom, mtime: file.mtime, dirty: false });
@@ -153,8 +166,13 @@ export async function restoreSession(): Promise<boolean> {
   }
   const saved = session?.activeId;
   const activeId = saved && (saved === mainId || saved === splitId) ? saved : mainId;
-  useTabs.setState({ tabs, activeId, mainId, splitId });
+  useTabs.setState({ tabs: pairUp(tabs, mainId, splitId, "main"), activeId, mainId, splitId });
   return true;
+}
+
+/** Streams in the big files of the restored session (call once the window is showing). */
+export function loadRestoredBigFiles() {
+  for (const [id, path] of bigFiles.splice(0)) void loadFileInto(id, path);
 }
 
 /** Start autosaving the session whenever tabs change. Call after restoreSession(). */
@@ -176,7 +194,7 @@ export function startSessionAutosave() {
 export async function checkExternalChanges() {
   const { tabs, update, replaceContent } = useTabs.getState();
   for (const t of tabs) {
-    if (!t.path) continue;
+    if (!t.path || t.loading) continue;
     const mtime = await backend.fileMtime(t.path).catch(() => null);
     if (mtime === null) {
       if (t.external !== "deleted") update(t.id, { external: "deleted" });
@@ -188,6 +206,12 @@ export async function checkExternalChanges() {
     }
     if (!t.dirty) {
       try {
+        if ((await backend.fileSize(t.path)) > LARGE_FILE_BYTES) {
+          // e.g. a growing log file: stream the new version in, with progress.
+          update(t.id, { loading: { loaded: 0, total: 1 } });
+          void loadFileInto(t.id, t.path);
+          continue;
+        }
         const file = await backend.readFile(t.path);
         const { content, eol } = splitEol(file.content);
         if (content === t.content) update(t.id, { mtime: file.mtime, external: undefined });

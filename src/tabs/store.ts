@@ -16,12 +16,14 @@ export interface Tab {
   dirty: boolean;
   /** On-disk modification time when the file was last loaded or saved. */
   mtime: number | null;
-  /** Markdown tabs: show raw source instead of the formatted editor. */
+  /** Markdown and HTML tabs: show the source instead of the formatted editor / preview. */
   mdSource: boolean;
   cursor: number;
   scroll: number;
   /** Set when the file changed or vanished on disk while open. */
   external?: "modified" | "deleted";
+  /** Set while a big file is read from disk in the background; the pane shows progress instead of an editor. */
+  loading?: { loaded: number; total: number };
   /** Bumped when content is replaced from outside the editor (reload, format) to remount it. */
   version: number;
 }
@@ -52,11 +54,29 @@ interface TabState {
   edit: (id: string, content: string) => void;
   /** Content replaced programmatically; editors remount to show it. */
   replaceContent: (id: string, content: string, patch?: Partial<Tab>) => void;
-  move: (fromId: string, toId: string) => void;
+  /** Moves a tab, or the pair of split-view tabs (`ids`, in order), to just before or after `targetId`. */
+  moveGroup: (ids: string[], targetId: string, after: boolean) => void;
   cycle: (dir: 1 | -1) => void;
   activateIndex: (i: number) => void;
   setStatus: (s: TabState["status"]) => void;
   notify: (text: string, kind?: "info" | "error") => void;
+}
+
+/**
+ * With a split view, the two visible tabs sit next to each other in the strip (left pane first), so
+ * they read and move as one group. `keep` is the tab that stays put; the other one moves next to it.
+ */
+export function pairUp(tabs: Tab[], mainId: string | null, splitId: string | null, keep: "main" | "split"): Tab[] {
+  if (!mainId || !splitId) return tabs;
+  const m = tabs.findIndex((t) => t.id === mainId);
+  const s = tabs.findIndex((t) => t.id === splitId);
+  if (m < 0 || s < 0 || s === m + 1) return tabs;
+  const moverId = keep === "main" ? splitId : mainId;
+  const rest = tabs.filter((t) => t.id !== moverId);
+  const mover = tabs[keep === "main" ? s : m];
+  const anchor = rest.findIndex((t) => t.id === (keep === "main" ? mainId : splitId));
+  rest.splice(keep === "main" ? anchor + 1 : anchor, 0, mover);
+  return rest;
 }
 
 let noticeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -88,15 +108,19 @@ export const useTabs = create<TabState>((set, get) => ({
         const at = tabs.findIndex((t) => t.id === s.activeId);
         tabs.splice(at >= 0 ? at + 1 : tabs.length, 0, tab);
       }
+      let keep: "main" | "split" = "main";
       if (activate) {
         if (!placed) {
           // New tabs open in the pane that has the focus.
           if (splitId && activeId === splitId) splitId = tab.id;
-          else mainId = tab.id;
+          else {
+            mainId = tab.id;
+            keep = "split";
+          }
         }
         activeId = tab.id;
       }
-      return { tabs, mainId, splitId, activeId };
+      return { tabs: pairUp(tabs, mainId, splitId, keep), mainId, splitId, activeId };
     }),
 
   removeTab: (id) =>
@@ -126,15 +150,17 @@ export const useTabs = create<TabState>((set, get) => ({
         }
       }
       if (!tabs.length) mainId = splitId = activeId = null;
-      return { tabs, mainId, splitId, activeId };
+      return { tabs: pairUp(tabs, mainId, splitId, "split"), mainId, splitId, activeId };
     }),
 
   setActive: (id) =>
     set((s) => {
       if (s.activeId === id || !s.tabs.some((t) => t.id === id)) return s;
       if (id === s.mainId || id === s.splitId) return { activeId: id };
-      if (s.splitId && s.activeId === s.splitId) return { splitId: id, activeId: id };
-      return { mainId: id, activeId: id };
+      // The tab joins the split group next to the other pane's tab.
+      if (s.splitId && s.activeId === s.splitId)
+        return { splitId: id, activeId: id, tabs: pairUp(s.tabs, s.mainId, id, "main") };
+      return { mainId: id, activeId: id, tabs: pairUp(s.tabs, id, s.splitId, "split") };
     }),
 
   openInSplit: (id) =>
@@ -143,11 +169,13 @@ export const useTabs = create<TabState>((set, get) => ({
       if (i < 0 || s.tabs.length < 2) return s;
       if (id === s.splitId) return { activeId: id };
       let mainId = s.mainId;
+      let keep: "main" | "split" = "main";
       if (id === mainId) {
         // A file can't be open twice, so the left pane moves to a neighbouring tab.
         mainId = (s.tabs[i + 1] ?? s.tabs[i - 1]).id;
+        keep = "split";
       }
-      return { mainId, splitId: id, activeId: id };
+      return { mainId, splitId: id, activeId: id, tabs: pairUp(s.tabs, mainId, id, keep) };
     }),
 
   closeSplit: () =>
@@ -168,15 +196,15 @@ export const useTabs = create<TabState>((set, get) => ({
       tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch, content, version: t.version + 1 } : t)),
     })),
 
-  move: (fromId, toId) =>
+  moveGroup: (ids, targetId, after) =>
     set((s) => {
-      const tabs = [...s.tabs];
-      const from = tabs.findIndex((t) => t.id === fromId);
-      const to = tabs.findIndex((t) => t.id === toId);
-      if (from < 0 || to < 0 || from === to) return s;
-      const [tab] = tabs.splice(from, 1);
-      tabs.splice(to, 0, tab);
-      return { tabs };
+      if (ids.includes(targetId)) return s;
+      const moving = ids.map((id) => s.tabs.find((t) => t.id === id)).filter((t): t is Tab => !!t);
+      const rest = s.tabs.filter((t) => !ids.includes(t.id));
+      const at = rest.findIndex((t) => t.id === targetId);
+      if (!moving.length || at < 0) return s;
+      rest.splice(after ? at + 1 : at, 0, ...moving);
+      return { tabs: rest };
     }),
 
   cycle: (dir) => {

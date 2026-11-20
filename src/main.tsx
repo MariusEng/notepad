@@ -8,12 +8,14 @@ import { App } from "./App";
 import { initTheme } from "./theme/theme";
 import { loadSettings, useSettings } from "./settings";
 import { installKeymap } from "./keymap";
-import { closeTab, formatActive, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource } from "./actions";
+import { closeTab, formatActive, newTab, openFiles, openHelp, saveTab, saveTabAs, toggleSource } from "./actions";
+import { openAbout } from "./About";
 import { openTypePicker } from "./TypePicker";
 import {
   openDialog,
   openRepoFolder,
   restoreRepo,
+  showBranchMenu,
   syncNow,
   syncOnFocus,
   toggleAutoCommit,
@@ -22,7 +24,13 @@ import {
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
-import { checkExternalChanges, restoreSession, saveSessionNow, startSessionAutosave } from "./session/session";
+import {
+  checkExternalChanges,
+  loadRestoredBigFiles,
+  restoreSession,
+  saveSessionNow,
+  startSessionAutosave,
+} from "./session/session";
 
 initTheme(); // from the localStorage cache, before first render
 
@@ -47,10 +55,14 @@ const MENU: Record<string, () => unknown> = {
   clone_repo: () => openDialog({ kind: "clone" }),
   git_accounts: () => openDialog({ kind: "accounts" }),
   sync_repo: () => syncNow(),
+  switch_branch: () => showBranchMenu(),
+  new_branch: () => openDialog({ kind: "newBranch" }),
+  help: openHelp,
+  about: openAbout,
   toggle_sidebar: toggleSidebar,
   toggle_autocommit: toggleAutoCommit,
   close_split: () => useTabs.getState().closeSplit(),
-  toggle_source: () => toggleMarkdownSource(),
+  toggle_source: () => toggleSource(),
   next_tab: () => useTabs.getState().cycle(1),
   prev_tab: () => useTabs.getState().cycle(-1),
   theme_system: () => useSettings.getState().setTheme("system"),
@@ -93,6 +105,7 @@ async function start() {
   if (useTabs.getState().tabs.length === 0) newTab();
 
   createRoot(document.getElementById("root")!).render(<App />);
+  loadRestoredBigFiles();
 }
 
 // The window starts hidden (tauri.conf.json) so it never shows unthemed content.

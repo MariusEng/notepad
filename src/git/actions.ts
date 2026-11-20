@@ -1,11 +1,12 @@
 import { open as pickFolder } from "@tauri-apps/plugin-dialog";
+import { Menu } from "@tauri-apps/api/menu";
 import { git } from "../lib/backend";
 import { useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
 import { openFiles } from "../actions";
 import { checkExternalChanges } from "../session/session";
 import { useGit, type Dialog, type SyncState } from "./store";
-import { hostOf, type Account, type RepoInfo, type SyncResult } from "./types";
+import { guessProvider, hostOf, pullRequestUrl, type Account, type RepoInfo, type SyncResult } from "./types";
 
 const notify = (text: string, kind: "info" | "error" = "info") => useTabs.getState().notify(text, kind);
 const setSync = (state: SyncState, message = "", conflicts: string[] = []) =>
@@ -94,9 +95,20 @@ function accountFor(repo: RepoInfo): Account | undefined {
   return useSettings.getState().accounts.find((a) => a.host === host);
 }
 
+/** Branches the user chose to keep committing to even though the server refuses pushes (this session). */
+const keepRejected = new Set<string>();
+export const keepCommittingTo = (branch: string) => keepRejected.add(branch);
+
 function failed(e: unknown) {
   const msg = String(e);
-  if (msg.startsWith("AUTH_REQUIRED:")) {
+  if (msg.startsWith("PUSH_REJECTED:")) {
+    const rest = msg.slice("PUSH_REJECTED:".length);
+    const cut = rest.indexOf(":");
+    const branch = rest.slice(0, cut);
+    const reason = rest.slice(cut + 1);
+    setSync("error", `The server doesn't accept pushes to ${branch}. Your commits are kept locally.`);
+    if (!keepRejected.has(branch)) openDialog({ kind: "pushRejected", branch, reason });
+  } else if (msg.startsWith("AUTH_REQUIRED:")) {
     const host = msg.slice("AUTH_REQUIRED:".length);
     setSync("auth", `Sign in to ${host || "the git server"} to sync`);
     openDialog({ kind: "accounts", host });
@@ -165,3 +177,98 @@ export function syncOnFocus() {
 // ---------------------------------------------------------------- opening files from the tree
 
 export const openRepoFile = (root: string, rel: string) => openFiles([joinPath(root, rel)]);
+
+// ---------------------------------------------------------------- branches
+
+function afterBranchChange(info: RepoInfo) {
+  setRepo(info);
+  useSettings.getState().update({ repoRoot: info.root });
+}
+
+/** Switches branch. Files on disk change; open tabs pick that up (unsaved edits get a banner). */
+export function switchBranch(name: string) {
+  const repo = useGit.getState().repo;
+  if (!repo) return Promise.resolve();
+  return enqueue(async () => {
+    try {
+      afterBranchChange(await git.switchBranch(repo.root, name));
+      await checkExternalChanges();
+      notify(`Switched to ${name}`);
+    } catch (e) {
+      notify(String(e), "error");
+    }
+  }).then(() => syncNow(true));
+}
+
+/** Creates a branch from the current commit, switches to it and publishes it on the remote. */
+export async function createBranch(name: string) {
+  const repo = useGit.getState().repo;
+  if (!repo) return;
+  afterBranchChange(await git.createBranch(repo.root, name.trim()));
+  notify(`Created branch ${name.trim()}`);
+  void syncNow(true);
+}
+
+/** Moves the commits the server refused onto a new branch, then pushes that branch. */
+export async function moveToNewBranch(name: string) {
+  const repo = useGit.getState().repo;
+  if (!repo) return;
+  afterBranchChange(await git.moveToBranch(repo.root, name.trim()));
+  await syncNow(true);
+}
+
+function providerOf(repo: RepoInfo) {
+  const account = accountFor(repo);
+  if (account) return account.provider;
+  try {
+    return guessProvider(hostOf(repo.remoteUrl ?? ""));
+  } catch {
+    return "forgejo" as const;
+  }
+}
+
+/** Address of the page for opening a pull request from the current branch, if that makes sense. */
+export function pullRequestLink(repo = useGit.getState().repo): string | null {
+  if (!repo?.remoteUrl || !repo.branch || !repo.defaultBranch || repo.branch === repo.defaultBranch) return null;
+  return pullRequestUrl(repo.remoteUrl, providerOf(repo), repo.branch, repo.defaultBranch);
+}
+
+export function openPullRequest() {
+  const url = pullRequestLink();
+  if (url) void git.openExternal(url);
+}
+
+/** Native menu with the branches, from the sidebar header or the status bar. */
+export async function showBranchMenu() {
+  const repo = useGit.getState().repo;
+  if (!repo) return;
+  const branches = await git.branches(repo.root).catch(() => []);
+  const item = (b: (typeof branches)[number]) => ({
+    id: `branch-${b.name}`,
+    text: b.name,
+    checked: b.current,
+    action: () => void (b.current ? undefined : switchBranch(b.name)),
+  });
+  const local = branches.filter((b) => b.local);
+  const remoteOnly = branches.filter((b) => !b.local);
+  const menu = await Menu.new({
+    items: [
+      ...local.map(item),
+      ...(remoteOnly.length
+        ? [{ id: "remote-branches", text: "Remote Branches", items: remoteOnly.map(item) }]
+        : []),
+      { item: "Separator" as const },
+      { id: "new-branch", text: "New Branch…", action: () => openDialog({ kind: "newBranch" }) },
+      {
+        id: "pull-request",
+        text: repo.defaultBranch ? `Create Pull Request into ${repo.defaultBranch}…` : "Create Pull Request…",
+        enabled: !!pullRequestLink(repo),
+        action: openPullRequest,
+      },
+      { id: "sync", text: "Sync Now", action: () => void syncNow() },
+      { item: "Separator" as const },
+      { id: "close-repo", text: "Close Repository", action: closeRepo },
+    ],
+  });
+  await menu.popup();
+}

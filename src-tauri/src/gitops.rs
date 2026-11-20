@@ -32,6 +32,19 @@ pub struct RepoInfo {
     pub remote_url: Option<String>,
     pub ahead: usize,
     pub behind: usize,
+    /// The remote's main branch (origin/HEAD, else main or master), the target for pull requests.
+    pub default_branch: Option<String>,
+}
+
+#[derive(Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BranchInfo {
+    pub name: String,
+    pub current: bool,
+    /// Exists as a local branch.
+    pub local: bool,
+    /// Exists on the remote (as last fetched).
+    pub remote: bool,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -122,7 +135,21 @@ fn info_of(repo: &Repository) -> Res<RepoInfo> {
         (Some(b), Some(r)) => ahead_behind(repo, b, r),
         _ => (0, 0),
     };
-    Ok(RepoInfo { root, name, branch, remote_url, ahead, behind })
+    let default_branch = remote.as_deref().and_then(|r| default_branch(repo, r));
+    Ok(RepoInfo { root, name, branch, remote_url, ahead, behind, default_branch })
+}
+
+fn default_branch(repo: &Repository, remote: &str) -> Option<String> {
+    let prefix = format!("refs/remotes/{remote}/");
+    if let Ok(head) = repo.find_reference(&format!("{prefix}HEAD")) {
+        if let Some(b) = head.symbolic_target().and_then(|t| t.strip_prefix(&prefix)) {
+            return Some(b.to_string());
+        }
+    }
+    ["main", "master"]
+        .into_iter()
+        .find(|b| repo.find_reference(&format!("{prefix}{b}")).is_ok())
+        .map(|b| b.to_string())
 }
 
 /// Opens the repository that contains `path` (the path can be any folder inside it).
@@ -216,7 +243,11 @@ fn fetch_remote(repo: &Repository, remote: &str, branch: Option<&str>, cred: &Op
     }
     let spec = match branch {
         Some(b) => vec![format!("+refs/heads/{b}:refs/remotes/{remote}/{b}")],
-        None => vec![format!("+refs/heads/*:refs/remotes/{remote}/*")],
+        None => {
+            // Forget branches that were deleted on the server.
+            fo.prune(git2::FetchPrune::On);
+            vec![format!("+refs/heads/*:refs/remotes/{remote}/*")]
+        }
     };
     match r.fetch(&spec, Some(&mut fo), None) {
         Ok(()) => Ok(()),
@@ -225,6 +256,9 @@ fn fetch_remote(repo: &Repository, remote: &str, branch: Option<&str>, cred: &Op
         Err(e) => Err(net_err(e, &url)),
     }
 }
+
+/// Error prefix for "the server won't take pushes to this branch": `PUSH_REJECTED:<branch>:<reason>`.
+pub const PUSH_REJECTED: &str = "PUSH_REJECTED:";
 
 fn push_branch(repo: &Repository, remote: &str, branch: &str, cred: &Option<Credential>) -> Res<()> {
     let mut r = repo.find_remote(remote).map_err(err)?;
@@ -246,10 +280,19 @@ fn push_branch(repo: &Repository, remote: &str, branch: &str, cred: &Option<Cred
         po.custom_headers(&header_refs);
     }
     let spec = format!("refs/heads/{branch}:refs/heads/{branch}");
-    r.push(&[spec.as_str()], Some(&mut po)).map_err(|e| net_err(e, &url))?;
+    if let Err(e) = r.push(&[spec.as_str()], Some(&mut po)) {
+        let lower = e.message().to_lowercase();
+        if lower.contains("protected") || lower.contains("hook declined") || lower.contains("denied to push")
+            || lower.contains("not allowed to push")
+        {
+            return Err(format!("{PUSH_REJECTED}{branch}:{}", e.message()));
+        }
+        return Err(net_err(e, &url));
+    }
     drop(po);
     if let Some(why) = rejected.into_inner() {
-        return Err(format!("The remote rejected the push ({why})"));
+        // The server refused this branch (protected main/master, review required, hook…).
+        return Err(format!("{PUSH_REJECTED}{branch}:{why}"));
     }
     // Remember where this branch lives, so ahead/behind can be shown.
     if let Ok(mut b) = repo.find_branch(branch, git2::BranchType::Local) {
@@ -432,7 +475,8 @@ pub fn sync(root: &str) -> Res<SyncResult> {
     let cfg = repo.config().map_err(err)?;
     let cred = creds::resolve(&url, &cfg);
 
-    fetch_remote(&repo, &remote, Some(&branch), &cred)?;
+    // All branches, so the branch menu also lists ones created elsewhere.
+    fetch_remote(&repo, &remote, None, &cred)?;
 
     let remote_ref = format!("refs/remotes/{remote}/{branch}");
     let their_ref = repo.find_reference(&remote_ref).ok();
@@ -501,6 +545,116 @@ pub fn sync(root: &str) -> Res<SyncResult> {
     repo.commit(Some("HEAD"), &sig, &sig, &format!("Merge {remote}/{branch}"), &tree, &[&ours, &theirs]).map_err(err)?;
     push_branch(&repo, &remote, &branch, &cred)?;
     result(&repo, "merged", "Merged the remote's changes and pushed.")
+}
+
+// ---------------------------------------------------------------- branches
+
+/// Local branches and the remote's branches (as of the last fetch), current first, then by name.
+pub fn list_branches(root: &str) -> Res<Vec<BranchInfo>> {
+    let repo = Repository::open(root).map_err(err)?;
+    let current = current_branch(&repo);
+    let remote = pick_remote(&repo);
+    let mut out: Vec<BranchInfo> = Vec::new();
+    for b in repo.branches(Some(git2::BranchType::Local)).map_err(err)?.flatten() {
+        if let Ok(Some(name)) = b.0.name() {
+            out.push(BranchInfo { name: name.to_string(), current: false, local: true, remote: false });
+        }
+    }
+    if let Some(remote) = &remote {
+        let prefix = format!("{remote}/");
+        for b in repo.branches(Some(git2::BranchType::Remote)).map_err(err)?.flatten() {
+            let Ok(Some(full)) = b.0.name() else { continue };
+            let Some(name) = full.strip_prefix(&prefix) else { continue };
+            if name == "HEAD" {
+                continue;
+            }
+            match out.iter_mut().find(|x| x.name == name) {
+                Some(x) => x.remote = true,
+                None => out.push(BranchInfo { name: name.to_string(), current: false, local: false, remote: true }),
+            }
+        }
+    }
+    if let Some(cur) = &current {
+        match out.iter_mut().find(|x| &x.name == cur) {
+            Some(x) => x.current = true,
+            // A branch without commits yet.
+            None => out.push(BranchInfo { name: cur.clone(), current: true, local: true, remote: false }),
+        }
+    }
+    out.sort_by(|a, b| b.current.cmp(&a.current).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
+    Ok(out)
+}
+
+fn check_branch_name(name: &str) -> Res<()> {
+    if name.trim().is_empty() || !git2::Branch::name_is_valid(name).unwrap_or(false) {
+        return Err(format!("“{name}” is not a valid branch name"));
+    }
+    Ok(())
+}
+
+/// Switches to `name`. A branch that only exists on the remote gets a local branch that tracks it.
+/// Fails without changing anything when local changes would be overwritten.
+pub fn switch_branch(root: &str, name: &str) -> Res<RepoInfo> {
+    let repo = Repository::open(root).map_err(err)?;
+    if current_branch(&repo).as_deref() == Some(name) {
+        return info_of(&repo);
+    }
+    let local_ref = format!("refs/heads/{name}");
+    let remote = pick_remote(&repo);
+    let target = match repo.refname_to_id(&local_ref) {
+        Ok(oid) => oid,
+        Err(_) => {
+            let r = remote.as_deref().ok_or_else(|| format!("There is no branch called {name}"))?;
+            repo.refname_to_id(&format!("refs/remotes/{r}/{name}"))
+                .map_err(|_| format!("There is no branch called {name}"))?
+        }
+    };
+    let commit = repo.find_commit(target).map_err(err)?;
+    repo.checkout_tree(commit.as_object(), Some(CheckoutBuilder::new().safe()))
+        .map_err(|e| format!("Can't switch branch: local changes would be overwritten ({})", e.message()))?;
+    if repo.find_reference(&local_ref).is_err() {
+        let mut b = repo.branch(name, &commit, false).map_err(err)?;
+        if let Some(r) = &remote {
+            let _ = b.set_upstream(Some(&format!("{r}/{name}")));
+        }
+    }
+    repo.set_head(&local_ref).map_err(err)?;
+    info_of(&repo)
+}
+
+/// Creates `name` at the current commit and switches to it (files on disk stay as they are).
+pub fn create_branch(root: &str, name: &str) -> Res<RepoInfo> {
+    check_branch_name(name)?;
+    let repo = Repository::open(root).map_err(err)?;
+    let local_ref = format!("refs/heads/{name}");
+    if repo.find_reference(&local_ref).is_ok() {
+        return Err(format!("A branch called {name} already exists"));
+    }
+    match repo.head().ok().and_then(|h| h.peel_to_commit().ok()) {
+        Some(head) => {
+            repo.branch(name, &head, false).map_err(err)?;
+        }
+        None => {} // no commits yet: HEAD just points at the new (unborn) branch
+    }
+    repo.set_head(&local_ref).map_err(err)?;
+    info_of(&repo)
+}
+
+/// For a branch the server won't accept pushes to: moves the unpushed commits to a new branch `name`
+/// (which becomes the current one) and puts the old branch back where the remote has it.
+/// Files on disk don't change. Push afterwards with `sync`.
+pub fn move_to_new_branch(root: &str, name: &str) -> Res<RepoInfo> {
+    check_branch_name(name)?;
+    let repo = Repository::open(root).map_err(err)?;
+    let old = current_branch(&repo).ok_or("No branch is checked out")?;
+    create_branch(root, name)?;
+    if let Some(remote) = pick_remote(&repo) {
+        if let Ok(up) = repo.refname_to_id(&format!("refs/remotes/{remote}/{old}")) {
+            let mut r = repo.find_reference(&format!("refs/heads/{old}")).map_err(err)?;
+            r.set_target(up, "notepad: commits moved to a new branch").map_err(err)?;
+        }
+    }
+    info_of(&repo)
 }
 
 /// Path of `file` relative to `root`, with forward slashes; None if it is outside the repository.

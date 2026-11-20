@@ -5,7 +5,7 @@ import "./markdown.css";
 import { cmHighlight, cmTheme } from "./cmTheme";
 import { activeEditor, registerEditor } from "./handle";
 import { useTabs, type Tab } from "../tabs/store";
-import { toggleMarkdownSource } from "../actions";
+import { toggleSource } from "../actions";
 import { createMdFormat } from "./mdFormat";
 
 const readAsDataUrl = (file: File) =>
@@ -80,7 +80,7 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
       focus: () => (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus(),
       // Search lives in the source view.
       find: () => {
-        toggleMarkdownSource(tab.id);
+        toggleSource(tab.id);
         setTimeout(() => activeEditor()?.find(), 50);
       },
       replaceAll: () => false,

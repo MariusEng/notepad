@@ -29,10 +29,8 @@ struct PendingOpen(Mutex<Vec<String>>);
 static QUIT_CONFIRMED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Serialize)]
-struct FileData {
-    content: String,
-    /// The file started with a UTF-8 byte order mark; written back on save.
-    bom: bool,
+struct FileStat {
+    size: u64,
     mtime: Option<u64>,
 }
 
@@ -63,15 +61,24 @@ fn buffer_path(app: &AppHandle, id: &str) -> Result<PathBuf, String> {
 // ---------- files ----------
 
 #[tauri::command]
-fn read_file(path: String) -> Result<FileData, String> {
-    let bytes = fs::read(&path).map_err(|e| format!("{path}: {e}"))?;
-    let bom = bytes.starts_with(&[0xEF, 0xBB, 0xBF]);
-    let body = if bom { &bytes[3..] } else { &bytes[..] };
-    Ok(FileData {
-        content: String::from_utf8_lossy(body).into_owned(),
-        bom,
-        mtime: mtime_ms(Path::new(&path)),
-    })
+fn file_stat(path: String) -> Result<FileStat, String> {
+    let meta = fs::metadata(&path).map_err(|e| format!("{path}: {e}"))?;
+    if meta.is_dir() {
+        return Err(format!("{path} is a folder"));
+    }
+    Ok(FileStat { size: meta.len(), mtime: mtime_ms(Path::new(&path)) })
+}
+
+/// Reads up to `len` bytes from `offset`, as raw bytes (an ArrayBuffer in the frontend, no JSON).
+/// Files are read in chunks like this so big files load with a progress bar and never block the app.
+#[tauri::command]
+fn read_file_range(path: String, offset: u64, len: u64) -> Result<tauri::ipc::Response, String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = fs::File::open(&path).map_err(|e| format!("{path}: {e}"))?;
+    f.seek(SeekFrom::Start(offset)).map_err(|e| format!("{path}: {e}"))?;
+    let mut buf = Vec::with_capacity(len.min(64 << 20) as usize);
+    f.take(len).read_to_end(&mut buf).map_err(|e| format!("{path}: {e}"))?;
+    Ok(tauri::ipc::Response::new(buf))
 }
 
 /// Writes in place (rather than temp + rename) so file permissions such as +x are kept.
@@ -306,6 +313,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("clone_repo", "Clone Repository…", None)?,
             &item("new_repo", "New Private Repository…", None)?,
             &item("sync_repo", "Sync Repository", None)?,
+            &item("switch_branch", "Switch Branch…", None)?,
+            &item("new_branch", "New Branch…", None)?,
             &item("git_accounts", "Git Accounts…", None)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::separator(app)?,
@@ -356,7 +365,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "View",
         true,
         &[
-            &item("toggle_source", "Toggle Markdown Source", Some("CmdOrCtrl+/"))?,
+            &item("toggle_source", "Toggle Source View", Some("CmdOrCtrl+/"))?,
             &item("toggle_format_bar", "Show/Hide Formatting Bar", None)?,
             &item("close_split", "Close Split View", None)?,
             &item("toggle_sidebar", "Show/Hide Repository Sidebar", Some("CmdOrCtrl+Shift+E"))?,
@@ -380,6 +389,13 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
+    let help = Submenu::with_items(app, "Help", true, &[&item("help", "Notepad Help", None)?])?;
+    #[cfg(not(target_os = "macos"))]
+    {
+        help.append(&PredefinedMenuItem::separator(app)?)?;
+        help.append(&item("about", "About Notepad", None)?)?;
+    }
+
     #[cfg(target_os = "macos")]
     {
         let app_menu = Submenu::with_items(
@@ -387,7 +403,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             "Notepad",
             true,
             &[
-                &PredefinedMenuItem::about(app, None, None)?,
+                &item("about", "About Notepad", None)?,
                 &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::hide(app, None)?,
                 &PredefinedMenuItem::hide_others(app, None)?,
@@ -397,10 +413,10 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                 &item("quit", "Quit Notepad", Some("CmdOrCtrl+Q"))?,
             ],
         )?;
-        Menu::with_items(app, &[&app_menu, &file, &edit, &view, &window])
+        Menu::with_items(app, &[&app_menu, &file, &edit, &view, &window, &help])
     }
     #[cfg(not(target_os = "macos"))]
-    Menu::with_items(app, &[&file, &edit, &view, &window])
+    Menu::with_items(app, &[&file, &edit, &view, &window, &help])
 }
 
 /// Restore size, position and maximised state, but not visibility: the window
@@ -452,7 +468,8 @@ pub fn run() {
             let _ = app.emit("menu", event.id().0.as_str());
         })
         .invoke_handler(tauri::generate_handler![
-            read_file,
+            file_stat,
+            read_file_range,
             write_file,
             file_mtime,
             load_state,
@@ -469,6 +486,10 @@ pub fn run() {
             git_cmds::git_commit_file,
             git_cmds::git_sync,
             git_cmds::git_clone,
+            git_cmds::git_branches,
+            git_cmds::git_switch_branch,
+            git_cmds::git_create_branch,
+            git_cmds::git_move_to_branch,
             git_cmds::git_create_repo,
             git_cmds::cred_save_pat,
             git_cmds::cred_delete,

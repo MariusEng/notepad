@@ -2,7 +2,7 @@
 //! anything that can take a while (network) runs on a worker thread so the UI stays responsive.
 
 use crate::creds::{self, Stored};
-use crate::gitops::{self, DirEntry, RepoInfo, SyncResult};
+use crate::gitops::{self, BranchInfo, DirEntry, RepoInfo, SyncResult};
 use crate::oauth;
 use crate::provider::{self, NewRepo, ProviderCfg, RepoCreated};
 use serde::Serialize;
@@ -42,6 +42,26 @@ pub fn git_commit_file(root: String, file: String, author: Option<String>) -> Re
 #[tauri::command]
 pub async fn git_sync(root: String) -> Res<SyncResult> {
     blocking(move || gitops::sync(&root)).await
+}
+
+#[tauri::command]
+pub fn git_branches(root: String) -> Res<Vec<BranchInfo>> {
+    gitops::list_branches(&root)
+}
+
+#[tauri::command]
+pub fn git_switch_branch(root: String, name: String) -> Res<RepoInfo> {
+    gitops::switch_branch(&root, &name)
+}
+
+#[tauri::command]
+pub fn git_create_branch(root: String, name: String) -> Res<RepoInfo> {
+    gitops::create_branch(&root, &name)
+}
+
+#[tauri::command]
+pub fn git_move_to_branch(root: String, name: String) -> Res<RepoInfo> {
+    gitops::move_to_new_branch(&root, &name)
 }
 
 #[tauri::command]

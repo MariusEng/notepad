@@ -30,6 +30,19 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     const lang = LANGUAGES[tab.language];
     const language = new Compartment();
     let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    // Copying a big document into the store on every keystroke would be slow; do it when typing pauses
+    // (and whenever something needs the text: see flushEdits).
+    const large = tab.content.length > 2_000_000;
+    let editTimer: ReturnType<typeof setTimeout> | undefined;
+    let pending = false;
+    // eslint-disable-next-line prefer-const
+    let view!: EditorView;
+    const flush = () => {
+      clearTimeout(editTimer);
+      if (!pending) return;
+      pending = false;
+      edit(tab.id, view.state.doc.toString());
+    };
 
     const reportStatus = (state: EditorState) => {
       // Only the focused pane drives the status bar.
@@ -64,7 +77,15 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         cmHighlight,
         language.of([]),
         EditorView.updateListener.of((u) => {
-          if (u.docChanged) edit(tab.id, u.state.doc.toString());
+          if (u.docChanged) {
+            if (!large) edit(tab.id, u.state.doc.toString());
+            else {
+              if (!useTabs.getState().tabs.find((t) => t.id === tab.id)?.dirty) update(tab.id, { dirty: true });
+              pending = true;
+              clearTimeout(editTimer);
+              editTimer = setTimeout(flush, 600);
+            }
+          }
           if (u.docChanged || u.selectionSet) {
             reportStatus(u.state);
             update(tab.id, { cursor: u.state.selection.main.head });
@@ -82,7 +103,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
       ],
     });
 
-    const view = new EditorView({ state, parent: host.current! });
+    view = new EditorView({ state, parent: host.current! });
     reportStatus(view.state);
 
     // Restore scroll after layout, and load the language grammar lazily.
@@ -91,11 +112,12 @@ export function CodeEditor({ tab }: { tab: Tab }) {
       if (useTabs.getState().activeId === tab.id) view.focus();
     });
     let cancelled = false;
-    lang.load().then((ext) => {
+    lang.load(tab.content).then((ext) => {
       if (!cancelled) view.dispatch({ effects: language.reconfigure(ext) });
     });
 
     const unregister = registerEditor(tab.id, {
+      flush,
       focus: () => view.focus(),
       find: () => {
         view.focus();
@@ -113,6 +135,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     return () => {
       cancelled = true;
       clearTimeout(scrollTimer);
+      flush();
       unregister();
       view.destroy();
     };

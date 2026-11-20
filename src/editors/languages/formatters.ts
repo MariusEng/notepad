@@ -23,11 +23,24 @@ export function formatJson(text: string, indent = 2): string {
   }
 }
 
-async function prettierFormat(text: string, parser: "yaml" | "markdown"): Promise<string> {
+async function prettierFormat(text: string, parser: "yaml" | "markdown" | "babel" | "html"): Promise<string> {
   const prettier = await import("prettier/standalone");
-  const plugin = parser === "yaml" ? await import("prettier/plugins/yaml") : await import("prettier/plugins/markdown");
+  const plugins =
+    parser === "yaml"
+      ? [await import("prettier/plugins/yaml")]
+      : parser === "markdown"
+        ? [await import("prettier/plugins/markdown")]
+        : parser === "babel"
+          ? [await import("prettier/plugins/babel"), await import("prettier/plugins/estree")]
+          : // HTML: the others format embedded <script> and <style>.
+            await Promise.all([
+              import("prettier/plugins/html"),
+              import("prettier/plugins/babel"),
+              import("prettier/plugins/estree"),
+              import("prettier/plugins/postcss"),
+            ]);
   try {
-    return await prettier.format(text, { parser, plugins: [plugin], proseWrap: "preserve" });
+    return await prettier.format(text, { parser, plugins: plugins as never, proseWrap: "preserve" });
   } catch (e) {
     throw new FormatError(String((e as Error).message).split("\n")[0]);
   }
@@ -35,6 +48,8 @@ async function prettierFormat(text: string, parser: "yaml" | "markdown"): Promis
 
 export const formatYaml = (text: string) => prettierFormat(text, "yaml");
 export const formatMarkdown = (text: string) => prettierFormat(text, "markdown");
+export const formatJavaScript = (text: string) => prettierFormat(text, "babel");
+export const formatHtml = (text: string) => prettierFormat(text, "html");
 
 /**
  * INI: trims lines, normalises "key=value" to "key = value", aligns the "=" within

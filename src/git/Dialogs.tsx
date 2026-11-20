@@ -2,7 +2,16 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { open as pickFolder } from "@tauri-apps/plugin-dialog";
 import { git } from "../lib/backend";
 import { useSettings } from "../settings";
-import { closeDialog, openDialog, openRepo } from "./actions";
+import {
+  closeDialog,
+  createBranch,
+  keepCommittingTo,
+  moveToNewBranch,
+  openDialog,
+  openPullRequest,
+  openRepo,
+  pullRequestLink,
+} from "./actions";
 import { useGit } from "./store";
 import {
   PROVIDERS,
@@ -29,6 +38,8 @@ export function GitDialogs() {
         {dialog.kind === "accounts" && <AccountsDialog host={dialog.host} />}
         {dialog.kind === "newRepo" && <NewRepoDialog />}
         {dialog.kind === "clone" && <CloneDialog />}
+        {dialog.kind === "newBranch" && <NewBranchDialog />}
+        {dialog.kind === "pushRejected" && <PushRejectedDialog branch={dialog.branch} reason={dialog.reason} />}
       </div>
     </div>
   );
@@ -451,6 +462,154 @@ function CloneDialog() {
         </button>
         <button className="btn primary" disabled={!!busy || !url.trim()} onClick={clone}>
           Clone
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------- branches
+
+/** "notes/2026-11-20": a suggested name for a branch of today's edits. */
+function suggestBranch(prefix: string) {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${prefix}/${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function NewBranchDialog() {
+  const repo = useGit((s) => s.repo);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const create = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await createBranch(name);
+      closeDialog();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <h2>New branch</h2>
+      <p className="note">
+        Starts from the current commit{repo?.branch ? ` on ${repo.branch}` : ""} and switches to it. Your files stay as they are; new
+        saves are committed and pushed to the new branch.
+      </p>
+      <Field label="Branch name">
+        <input
+          autoFocus
+          value={name}
+          placeholder={suggestBranch("notes")}
+          spellCheck={false}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && name.trim() && !busy && void create()}
+        />
+      </Field>
+      {error && <p className="error">{error}</p>}
+      <div className="dialog-actions">
+        <span className="sb-spacer" />
+        <button className="btn" onClick={closeDialog}>
+          Cancel
+        </button>
+        <button className="btn primary" disabled={busy || !name.trim()} onClick={create}>
+          Create Branch
+        </button>
+      </div>
+    </>
+  );
+}
+
+function PushRejectedDialog({ branch, reason }: { branch: string; reason: string }) {
+  const repo = useGit((s) => s.repo);
+  const [name, setName] = useState(() => suggestBranch("notes"));
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  const move = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await moveToNewBranch(name);
+      if (useGit.getState().sync.state === "error") setError(useGit.getState().sync.message);
+      else setDone(true);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (done) {
+    const pr = pullRequestLink();
+    return (
+      <>
+        <h2>Pushed to {repo?.branch}</h2>
+        <p className="note">
+          Your commits are on the branch <b>{repo?.branch}</b> on the server, and new saves go there too.
+          {pr ? ` To get them into ${repo?.defaultBranch}, open a pull request.` : ""}
+        </p>
+        <div className="dialog-actions">
+          <span className="sb-spacer" />
+          <button className="btn" onClick={closeDialog}>
+            Close
+          </button>
+          {pr && (
+            <button
+              className="btn primary"
+              onClick={() => {
+                openPullRequest();
+                closeDialog();
+              }}
+            >
+              Create Pull Request…
+            </button>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h2>The server doesn't accept pushes to {branch}</h2>
+      <p className="note">
+        Many repositories protect their main branch: changes go in through a branch and a pull request. Your commits are
+        saved locally and nothing is lost.
+      </p>
+      {reason && <p className="field-hint">Server: {reason}</p>}
+      <Field label="Move the unpushed commits to a new branch and push it" hint={`${branch} goes back to what the server has; your files don't change.`}>
+        <input
+          autoFocus
+          value={name}
+          spellCheck={false}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && name.trim() && !busy && void move()}
+        />
+      </Field>
+      {error && <p className="error">{error}</p>}
+      <div className="dialog-actions">
+        <button
+          className="btn ghost"
+          title={`Keep committing to ${branch} locally without asking again this session`}
+          onClick={() => {
+            keepCommittingTo(branch);
+            closeDialog();
+          }}
+        >
+          Not Now
+        </button>
+        <span className="sb-spacer" />
+        <button className="btn primary" disabled={busy || !name.trim()} onClick={move}>
+          {busy ? "Pushing…" : "Move & Push"}
         </button>
       </div>
     </>

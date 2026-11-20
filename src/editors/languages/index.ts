@@ -3,7 +3,11 @@ import { StreamLanguage } from "@codemirror/language";
 
 export type LanguageId =
   | "markdown"
+  | "html"
+  | "javascript"
   | "plaintext"
+  | "log"
+  | "csv"
   | "powershell"
   | "perl"
   | "shell"
@@ -22,7 +26,8 @@ export interface LanguageInfo {
   extensions: string[];
   /** Soft-wrap long lines (prose) instead of scrolling horizontally (code). */
   wrap: boolean;
-  load: () => Promise<Extension>;
+  /** The editor extension; `doc` is the text it opens with (CSV and logs look at it to find their columns). */
+  load: (doc: string) => Promise<Extension>;
 }
 
 const legacy = async <T>(p: Promise<T>, pick: (m: T) => any) => StreamLanguage.define(pick(await p));
@@ -35,12 +40,40 @@ export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
     wrap: true,
     load: async () => (await import("@codemirror/lang-markdown")).markdown(),
   },
+  html: {
+    id: "html",
+    label: "HTML",
+    extensions: ["html", "htm", "xhtml"],
+    wrap: false,
+    load: async () => (await import("@codemirror/lang-html")).html(),
+  },
+  javascript: {
+    id: "javascript",
+    label: "JavaScript",
+    extensions: ["js", "mjs", "cjs", "jsx"],
+    wrap: false,
+    load: async () => (await import("@codemirror/lang-javascript")).javascript({ jsx: true }),
+  },
   plaintext: {
     id: "plaintext",
     label: "Plain Text",
-    extensions: ["txt", "text", "log"],
+    extensions: ["txt", "text"],
     wrap: true,
     load: async () => [],
+  },
+  log: {
+    id: "log",
+    label: "Log",
+    extensions: ["log", "out", "err"],
+    wrap: false,
+    load: async (doc) => (await import("./columns")).logColumns(doc),
+  },
+  csv: {
+    id: "csv",
+    label: "CSV / TSV",
+    extensions: ["csv", "tsv", "tab", "psv"],
+    wrap: false,
+    load: async (doc) => (await import("./columns")).csvColumns(doc),
   },
   powershell: {
     id: "powershell",
@@ -123,6 +156,9 @@ export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
   },
 };
 
+/** Languages with a rendered view (Markdown: formatted editor, HTML: preview) next to the source. */
+export const hasRenderedView = (id: LanguageId) => id === "markdown" || id === "html";
+
 export const LANGUAGE_LIST = Object.values(LANGUAGES);
 
 export function fileName(path: string): string {
@@ -173,12 +209,14 @@ export function detectLanguage(path: string, content = ""): LanguageId {
     }
   }
   if (name === ".env" || name.startsWith(".env.")) return "ini";
+  if (/\.log\.\d+$|\.log\.\d{4}-\d\d-\d\d$|\.log\.(old|bak|gz\.txt)$/.test(name)) return "log"; // rotated logs
   if (name === ".bashrc" || name === ".zshrc" || name === ".profile" || name === ".bash_profile") return "shell";
   const first = content.slice(0, 200).split("\n", 1)[0];
   if (first.startsWith("#!")) {
     if (/\b(ba|z|k|da)?sh\b/.test(first)) return "shell";
     if (/\bperl\b/.test(first)) return "perl";
     if (/\bpwsh\b|powershell/i.test(first)) return "powershell";
+    if (/\b(node|deno|bun)\b/.test(first)) return "javascript";
   }
   return "plaintext";
 }

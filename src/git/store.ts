@@ -7,7 +7,10 @@ export type Dialog =
   | null
   | { kind: "accounts"; host?: string }
   | { kind: "newRepo" }
-  | { kind: "clone" };
+  | { kind: "clone" }
+  | { kind: "newBranch" }
+  /** The server refused a push to `branch` (protected main/master): offer to move the commits to a new branch. */
+  | { kind: "pushRejected"; branch: string; reason: string };
 
 interface GitState {
   repo: RepoInfo | null;

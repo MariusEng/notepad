@@ -86,8 +86,32 @@ select {
   background: var(--bg-hover);
   color: var(--fg);
 }
-.tab.dragging {
-  opacity: 0.4;
+/* A tab, or the two tabs shown side by side, which move together. */
+.tab-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 1 auto;
+  height: 100%;
+}
+.tab-group.pair {
+  height: 32px;
+  padding: 0 2px;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.tab-group.dragging {
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+}
+.tab-group.dragging .tab {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+body.tab-dragging,
+body.tab-dragging * {
+  cursor: grabbing !important;
 }
 
 .tab-title {
@@ -429,6 +453,14 @@ select {
   position: absolute;
   inset: 0;
 }
+.html-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  /* An HTML page without its own background renders like a browser: on white. */
+  background: #fff;
+}
 .pane-divider {
   position: relative;
   background: var(--border);
@@ -474,6 +506,24 @@ body.resizing {
   padding: 8px 8px 6px 12px;
   color: var(--fg);
 }
+.sb-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.sb-title:hover {
+  background: var(--bg-hover);
+}
 .sb-repo {
   font-weight: 600;
   overflow: hidden;
@@ -488,13 +538,26 @@ body.resizing {
   white-space: nowrap;
 }
 .sb-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  align-self: center;
+  width: 22px;
+  height: 22px;
   border: 0;
   background: transparent;
   color: var(--faint);
-  font-size: 16px;
-  line-height: 1;
-  padding: 0 4px;
+  padding: 0;
   border-radius: 4px;
+}
+.sb-x svg,
+.sb-icon svg {
+  width: 15px;
+  height: 15px;
+}
+.sb-icon {
+  display: grid;
+  place-items: center;
 }
 .sb-x:hover {
   background: var(--bg-hover);
@@ -673,4 +736,100 @@ body.resizing {
 .dialog details.advanced summary {
   color: var(--muted);
   cursor: default;
+}
+
+/* ---------- about ---------- */
+.dialog.about {
+  width: min(520px, calc(100vw - 32px));
+  outline: none;
+}
+.dialog h3 {
+  margin: 14px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.about-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.about-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+.about-list a {
+  color: var(--fg);
+}
+.about-use {
+  flex: 1;
+  color: var(--muted);
+}
+.about-license {
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+/* ---------- big files, CSV and log columns ---------- */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  color: var(--muted);
+  font-size: 13px;
+}
+.loading-bar {
+  width: min(320px, 70%);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-hover);
+  overflow: hidden;
+}
+.loading-bar > div {
+  height: 100%;
+  background: var(--accent);
+  transition: width 120ms;
+}
+
+.cm-col-0 { color: var(--col-0); }
+.cm-col-1 { color: var(--col-1); }
+.cm-col-2 { color: var(--col-2); }
+.cm-col-3 { color: var(--col-3); }
+.cm-col-4 { color: var(--col-4); }
+.cm-col-5 { color: var(--col-5); }
+.cm-col-6 { color: var(--col-6); }
+.cm-col-7 { color: var(--col-7); }
+.cm-col-sep {
+  color: var(--faint);
+}
+.cm-col-head {
+  font-weight: 600;
+}
+.cm-log-level {
+  font-weight: 600;
+}
+.cm-log-error {
+  color: var(--log-error);
+}
+.cm-log-warn {
+  color: var(--log-warn);
+}
+.cm-log-info {
+  color: var(--muted);
+}
+.cm-log-debug {
+  color: var(--faint);
+}
+.cm-log-error-line {
+  background: var(--log-error-bg);
+}
+.cm-log-warn-line {
+  background: var(--log-warn-bg);
 }
