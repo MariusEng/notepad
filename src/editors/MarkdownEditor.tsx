@@ -5,8 +5,8 @@ import "./markdown.css";
 import { cmHighlight, cmTheme } from "./cmTheme";
 import { activeEditor, setActiveEditor } from "./handle";
 import { useTabs, type Tab } from "../tabs/store";
-import { useSettings } from "../settings";
 import { toggleMarkdownSource } from "../actions";
+import { createMdFormat } from "./mdFormat";
 
 const readAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -19,15 +19,14 @@ const readAsDataUrl = (file: File) =>
 /**
  * Formatted Markdown editing: you see rendered text, and the file stays plain .md.
  * Formatting: select text for a floating toolbar, type "/" for blocks, Markdown
- * shortcuts (## , - , > , **bold**) and ⌘B/⌘I/⌘E. An optional fixed formatting bar
- * can be turned on from the View menu.
+ * shortcuts (## , - , > , **bold**) and ⌘B/⌘I/⌘E. The fixed formatting bar above the
+ * editor (FormatBar) drives it through the `md` handle.
  *
  * Uncontrolled like CodeEditor: the parent remounts it when needed.
  */
 export function MarkdownEditor({ tab }: { tab: Tab }) {
   const host = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
-  const formatBar = useSettings((s) => s.formatBar);
 
   useEffect(() => {
     const { edit, update } = useTabs.getState();
@@ -38,7 +37,8 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
       root: host.current!,
       defaultValue: tab.content,
       features: {
-        [Crepe.Feature.TopBar]: formatBar,
+        // The formatting bar is app-level (FormatBar), not inside the editor.
+        [Crepe.Feature.TopBar]: false,
         [Crepe.Feature.Latex]: false,
         [Crepe.Feature.AI]: false,
       },
@@ -74,6 +74,7 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
     });
 
     setActiveEditor({
+      md: createMdFormat(crepe),
       focus: () => (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus(),
       // Search lives in the source view.
       find: () => {

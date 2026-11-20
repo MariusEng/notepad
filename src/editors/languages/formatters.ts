@@ -76,3 +76,14 @@ export function tidyWhitespace(text: string): string {
   if (!text) return text;
   return text.replace(/[ \t]+$/gm, "").replace(/\n*$/, "\n");
 }
+
+/** SQL via sql-formatter. Keyword case is left as written; indentation is 4 spaces. */
+export async function formatSql(text: string, language: "sql" | "postgresql" | "transactsql"): Promise<string> {
+  if (!text.trim()) return text;
+  const { format } = await import("sql-formatter");
+  try {
+    return format(text, { language, tabWidth: 4, keywordCase: "preserve", linesBetweenQueries: 1 }).replace(/\n*$/, "\n");
+  } catch (e) {
+    throw new FormatError(`SQL: ${String((e as Error).message).split("\n")[0]}`);
+  }
+}

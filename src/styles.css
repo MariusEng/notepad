@@ -287,3 +287,61 @@ select {
     padding-left: 10px;
   }
 }
+
+/* ---------- formatting bar ---------- */
+
+.formatbar {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+  height: 34px;
+  padding: 0 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.formatbar::-webkit-scrollbar {
+  display: none;
+}
+.fb-group {
+  display: flex;
+  gap: 1px;
+  padding-left: 4px;
+  margin-left: 4px;
+  border-left: 1px solid var(--border);
+}
+.fb-btn,
+.fb-heading {
+  height: 24px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.fb-btn {
+  min-width: 26px;
+  padding: 0 6px;
+}
+.fb-heading {
+  padding: 0 4px;
+  max-width: 110px;
+}
+.fb-btn:not(:disabled):hover,
+.fb-heading:not(:disabled):hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.fb-btn.on {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+.fb-btn:disabled,
+.fb-heading:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

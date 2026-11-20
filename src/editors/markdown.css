@@ -42,44 +42,22 @@
   min-height: 100%;
 }
 
-/* A comfortable reading column, centred, that shrinks on narrow windows. */
+/* Full-width and tight, like the code editor: only a small margin around the text. */
 .md-editor .milkdown .ProseMirror {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 40px 72px 30vh;
+  max-width: none;
+  margin: 0;
+  padding: 10px 14px 30vh;
   line-height: 1.65;
   outline: none;
+}
+.md-editor .milkdown .ProseMirror > :first-child {
+  margin-top: 0;
+}
+/* The block drag handle needs gutter space that this layout doesn't have. */
+.md-editor .milkdown .milkdown-block-handle {
+  display: none;
 }
 
 .md-editor .milkdown .ProseMirror ::selection {
   background: var(--selection);
-}
-
-/* Optional formatting bar: flat and quiet. */
-.md-editor .milkdown .milkdown-top-bar {
-  background: color-mix(in srgb, var(--bg), transparent 8%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--border);
-  justify-content: center;
-  min-height: 40px;
-  padding: 0 8px;
-}
-.md-editor .milkdown .milkdown-top-bar .top-bar-inner {
-  max-width: 760px;
-  justify-content: center;
-}
-.md-editor .milkdown .milkdown-top-bar .top-bar-divider {
-  margin: 8px 4px;
-  height: 18px;
-}
-
-@media (max-width: 640px) {
-  .md-editor .milkdown .ProseMirror {
-    padding: 20px 18px 30vh;
-  }
-  /* The drag handle needs gutter space we don't have on narrow windows. */
-  .md-editor .milkdown .milkdown-block-handle {
-    display: none;
-  }
 }

@@ -6,10 +6,12 @@ the features, shortcuts and file layout.
 
 ## User's requirements and decisions
 - Minimal, modern UI with as little "stuff" as possible. Keep chrome quiet; don't add visible controls
-  without a reason. The Markdown formatting bar is opt-in (View menu); the default is the floating
-  selection toolbar plus the `/` menu.
+  without a reason. The Markdown formatting bar sits under the tabs (`FormatBar.tsx`, hideable in
+  the View menu) and is greyed out for non-Markdown files and Markdown source view; the floating
+  selection toolbar and `/` menu also stay. Markdown has minimal padding (full width, 14px), like
+  the code editor, so the block drag handle is hidden.
 - Cmd+N creates a new `.md` tab. Files are saved as real Markdown, never as rich text.
-- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, Markdown.
+- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown.
 - Hot exit: closing the app never prompts; tabs and unsaved edits are restored on launch.
 - Tab switching is Ctrl+Tab on all platforms. The user asked for Cmd+Tab, but macOS reserves it for
   the app switcher and the app can't receive it; the user was told this.
@@ -21,7 +23,8 @@ the features, shortcuts and file layout.
 - `src-tauri/src/lib.rs`: all Rust. File I/O (keeps BOM and permissions), `session.json` /
   `settings.json` / `buffers/*.txt` in the app-data dir, native menu (accelerators emit a `menu`
   event with the item id), quit flow (`ExitRequested` → frontend saves → `quit_app`), macOS
-  file-open events, external formatters (fixed allow-list: shfmt, perltidy, pwsh).
+  file-open events, external formatters (fixed allow-list: shfmt, perltidy, pwsh). SQL is formatted in-process
+  with sql-formatter.
 - `src/main.tsx`: startup order (settings → keymap/listeners → restore session → render → show
   window) and the menu-id → action map.
 - `src/actions.ts`: every user action (new/open/save/close/format/reload…).
@@ -53,6 +56,9 @@ The user installs by copying `Notepad.app` to /Applications. Quit the running co
 replacing it.
 
 ## Status (2026-11-20)
+Latest: tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+not yet checked by eye).
+
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown
 formatted Markdown with source toggle, minimal UI, hot exit/session restore, external-change
 detection, Format Document, window-state restore, README, release build fix.

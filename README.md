@@ -10,12 +10,15 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 
 - **Formatted Markdown editing**: select text for a floating toolbar, type `/` for blocks
   (headings, lists, tasks, tables, code, quotes), or use Markdown shortcuts (`## `, `- `, `> `, `**bold**`).
-  An optional fixed formatting bar is under **View → Show/Hide Formatting Bar**.
+  A fixed formatting bar sits under the tabs (hide it under **View → Show/Hide Formatting Bar**);
+  it is greyed out for non-Markdown files and in the Markdown source view.
   **⌘/** (Ctrl+/) toggles the raw Markdown source.
 - **Syntax highlighting** for PowerShell, Perl, shell, batch (`.bat`/`.cmd`), INI, YAML, JSON,
-  Markdown and plain text. The language comes from the file extension or shebang, and can be changed
+  SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. For `.sql` files the dialect is guessed
+  from the content (e.g. `GO`, `@vars`, `[brackets]` → T-SQL; `$$`, `::`, `RETURNING` → PostgreSQL)
+  and can be changed in the status bar. The language comes from the file extension or shebang, and can be changed
   in the status bar.
-- **Format Document** (⇧⌥F / Shift+Alt+F): JSON, YAML, Markdown and INI are built in. Shell, Perl and PowerShell
+- **Format Document** (⇧⌥F / Shift+Alt+F): JSON, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
   use external tools if they are installed:
   - shell: `brew install shfmt`
   - Perl: `brew install perltidy`
@@ -61,11 +64,13 @@ cd src-tauri && cargo test
 ```
 src/
   actions.ts            new/open/save/close/format: everything menus and shortcuts trigger
+  FormatBar.tsx         formatting bar under the tabs
   keymap.ts             tab-switching shortcuts (other shortcuts are native menu accelerators)
   session/session.ts    hot exit: session.json + buffers, external change detection
   tabs/                 tab store (Zustand) and tab bar
   editors/
     MarkdownEditor.tsx  Milkdown Crepe (formatted Markdown)
+    mdFormat.ts         formatting commands used by the formatting bar
     CodeEditor.tsx      CodeMirror 6
     cmTheme.ts          CodeMirror theme built on CSS variables
     languages/          language registry, batch mode, formatters

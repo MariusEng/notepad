@@ -1,6 +1,6 @@
 import { backend } from "../../lib/backend";
 import type { LanguageId } from ".";
-import { FormatError, formatIni, formatJson, formatMarkdown, formatYaml, tidyWhitespace } from "./formatters";
+import { FormatError, formatIni, formatSql, formatJson, formatMarkdown, formatYaml, tidyWhitespace } from "./formatters";
 
 export { FormatError };
 
@@ -21,6 +21,12 @@ export async function formatText(language: LanguageId, text: string): Promise<st
       return external("perltidy", text, 4);
     case "powershell":
       return external("pwsh", text, 4);
+    case "sql":
+      return formatSql(text, "sql");
+    case "pgsql":
+      return formatSql(text, "postgresql");
+    case "tsql":
+      return formatSql(text, "transactsql");
     case "batch":
     case "plaintext":
       return tidyWhitespace(text);

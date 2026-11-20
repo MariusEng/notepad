@@ -10,7 +10,10 @@ export type LanguageId =
   | "batch"
   | "ini"
   | "yaml"
-  | "json";
+  | "json"
+  | "sql"
+  | "pgsql"
+  | "tsql";
 
 export interface LanguageInfo {
   id: LanguageId;
@@ -88,6 +91,36 @@ export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
     wrap: false,
     load: async () => (await import("@codemirror/lang-json")).json(),
   },
+  sql: {
+    id: "sql",
+    label: "SQL (ANSI)",
+    extensions: ["sql", "ddl", "dml"],
+    wrap: false,
+    load: async () => {
+      const m = await import("@codemirror/lang-sql");
+      return m.sql({ dialect: m.StandardSQL });
+    },
+  },
+  pgsql: {
+    id: "pgsql",
+    label: "PostgreSQL",
+    extensions: ["pgsql", "psql", "plpgsql"],
+    wrap: false,
+    load: async () => {
+      const m = await import("@codemirror/lang-sql");
+      return m.sql({ dialect: m.PostgreSQL });
+    },
+  },
+  tsql: {
+    id: "tsql",
+    label: "T-SQL (SQL Server)",
+    extensions: ["tsql"],
+    wrap: false,
+    load: async () => {
+      const m = await import("@codemirror/lang-sql");
+      return m.sql({ dialect: m.MSSQL });
+    },
+  },
 };
 
 export const LANGUAGE_LIST = Object.values(LANGUAGES);
@@ -96,13 +129,48 @@ export function fileName(path: string): string {
   return path.split(/[\\/]/).pop() || path;
 }
 
+/**
+ * ".sql" says nothing about the dialect, so look for tell-tale syntax: T-SQL has GO batch
+ * separators, @variables, [bracketed] identifiers and N'' strings; PostgreSQL has $$ bodies, ::
+ * casts, RETURNING and psql meta-commands. Anything else is treated as ANSI SQL.
+ */
+export function sniffSql(content: string): LanguageId {
+  const text = content.slice(0, 20000);
+  const tsql = [
+    /^\s*go\s*$/im,
+    /\bset\s+nocount\b/i,
+    /\bbegin\s+(try|catch)\b/i,
+    /(^|[\s,(])@@?[a-z_]\w*/i,
+    /\[[A-Za-z_][\w ]*\]\s*[.,)=]|\b(from|join|table|into)\s+\[/i,
+    /\bn'/i,
+    /\b(nvarchar|uniqueidentifier|datetime2|getdate\(\)|isnull\(|top\s*\(?\d+)/i,
+    /\bexec(ute)?\s+(sp_|xp_|dbo\.)/i,
+  ].filter((r) => r.test(text)).length;
+  const pg = [
+    /\$\w*\$/,
+    /::\s*[a-z_]+/i,
+    /\breturning\b/i,
+    /\blanguage\s+plpgsql\b/i,
+    /^\s*\\[a-z]+/im,
+    /\b(ilike|serial|bigserial|jsonb|bytea|tsvector)\b/i,
+    /\bcreate\s+(extension|or\s+replace\s+function)\b/i,
+    /\b(on\s+conflict|generate_series|now\(\))/i,
+  ].filter((r) => r.test(text)).length;
+  if (tsql > pg && tsql >= 2) return "tsql";
+  if (pg > tsql && pg >= 1) return "pgsql";
+  return "sql";
+}
+
 /** Picks a language from the file extension, then from a shebang line. */
 export function detectLanguage(path: string, content = ""): LanguageId {
   const name = fileName(path).toLowerCase();
   const dot = name.lastIndexOf(".");
   if (dot > 0) {
     const ext = name.slice(dot + 1);
-    for (const lang of LANGUAGE_LIST) if (lang.extensions.includes(ext)) return lang.id;
+    for (const lang of LANGUAGE_LIST) {
+      if (!lang.extensions.includes(ext)) continue;
+      return lang.id === "sql" && ext === "sql" ? sniffSql(content) : lang.id;
+    }
   }
   if (name === ".env" || name.startsWith(".env.")) return "ini";
   if (name === ".bashrc" || name === ".zshrc" || name === ".profile" || name === ".bash_profile") return "shell";

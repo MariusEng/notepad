@@ -5,13 +5,12 @@ import { StatusBar } from "./StatusBar";
 import { Banner } from "./Banner";
 import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
-import { useSettings } from "./settings";
+import { FormatBar } from "./FormatBar";
 import { useTabs } from "./tabs/store";
 
 export function App() {
   const tab = useTabs((s) => s.tabs.find((t) => t.id === s.activeId));
   const notice = useTabs((s) => s.notice);
-  const formatBar = useSettings((s) => s.formatBar);
 
   // Window title: "notes.md • — Notepad"
   useEffect(() => {
@@ -22,11 +21,12 @@ export function App() {
   return (
     <div className="app">
       <TabBar />
+      <FormatBar />
       {tab && <Banner tab={tab} />}
       <main className="editor-area">
         {tab &&
           (tab.language === "markdown" && !tab.mdSource ? (
-            <MarkdownEditor key={`md:${tab.id}:${tab.version}:${formatBar}`} tab={tab} />
+            <MarkdownEditor key={`md:${tab.id}:${tab.version}`} tab={tab} />
           ) : (
             <CodeEditor key={`cm:${tab.id}:${tab.version}:${tab.language}`} tab={tab} />
           ))}
