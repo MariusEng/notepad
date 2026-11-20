@@ -19,6 +19,11 @@ the features, shortcuts and file layout.
 - Light/dark theme follows the OS, with a manual override under View → Theme.
 - Git: remote is git.1011.no (Forgejo), **always push over HTTPS**. Commit and push after each
   major change. Commit messages end with a Co-Authored-By line for Claude.
+- **Bump the version with every change** (semver): minor (0.x.0) for new features or a batch of
+  noticeable changes, major for big/breaking overhauls, patch (0.0.x) only for small fixes.
+  Keep these in sync: `package.json`, `package-lock.json` (top two entries),
+  `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (the `notepad` entry).
+  Put the bump in the same commit as the change.
 
 ## Architecture in brief
 - `src-tauri/src/lib.rs`: all Rust. File I/O (keeps BOM and permissions), `session.json` /
@@ -56,8 +61,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20)
-Latest: tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-20, version 0.2.0)
+Latest (0.2.0): new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown
