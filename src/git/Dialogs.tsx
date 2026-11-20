@@ -234,7 +234,7 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
           {builtin ? (
             <>
               <p className="note">
-                Your browser opens so you can sign in and allow access. {info.label} may show the app as “{builtin.name}”.
+                {info.deviceFlow && useDevice ? "You get a short code to enter on the provider’s page in your browser." : "Your browser opens so you can sign in and allow access."} {info.label} may show the app as “{builtin.name}”.
               </p>
               <details className="advanced">
                 <summary>Use my own OAuth app instead</summary>

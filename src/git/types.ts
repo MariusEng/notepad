@@ -90,7 +90,7 @@ export const PROVIDERS: Record<ProviderKind, ProviderInfo> = {
     secretRequired: false,
     owner: { label: "Organisation (optional)", required: false },
     project: false,
-    oauthHelp: "Register an OAuth app (Settings → Developer settings), tick “Enable Device Flow”, and paste its client id.",
+    oauthHelp: "Only needed for GitHub Enterprise or your own app: register an OAuth app (Settings → Developer settings), tick “Enable Device Flow”, and paste its client id.",
     patHelp: "Create a token with the “repo” scope (Settings → Developer settings → Personal access tokens).",
   },
   gitlab: {
@@ -145,13 +145,14 @@ export const PROVIDERS: Record<ProviderKind, ProviderInfo> = {
  *  - Forgejo and Gitea pre-register apps for git credential helpers on every server, with the same ids
  *    (https://forgejo.org/docs/latest/user/authentication/oauth2-provider/); this is "git-credential-oauth".
  *  - For the others, register an OAuth app for Notepad once and paste its client id here:
- *    GitHub (device flow enabled, host github.com), GitLab (public app, scope api, host gitlab.com, redirect
- *    http://127.0.0.1:51789), Azure DevOps (Entra public client). Bitbucket needs a client secret, so it cannot
+ *    GitLab (public app, scope api, host gitlab.com, redirect http://127.0.0.1:51789), Azure DevOps (Entra public
+ *    client). GitHub uses the GitHub CLI's public app, like git tools do. Bitbucket needs a client secret, so it cannot
  *    be shipped.
  */
 export const BUILTIN_OAUTH: Record<ProviderKind, { clientId: string; hosts?: string[]; name: string } | null> = {
   forgejo: { clientId: "a4792ccc-144e-407e-86c9-5e7d8d9c3269", name: "git-credential-oauth" },
-  github: { clientId: "", hosts: ["github.com"], name: "Notepad" },
+  // The GitHub CLI's public OAuth app: device flow (github.com/login/device), no secret needed. github.com only.
+  github: { clientId: "178c6fc778ccc68e1d6a", hosts: ["github.com"], name: "GitHub CLI" },
   gitlab: { clientId: "", hosts: ["gitlab.com"], name: "Notepad" },
   azure: { clientId: "", name: "Notepad" },
   bitbucket: null,
