@@ -1,13 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
-import { newTab } from "./actions";
+import { newTab, saveTabAs } from "./actions";
 import { LANGUAGE_LIST, type LanguageId } from "./editors/languages";
+import { useTabs } from "./tabs/store";
 
-const usePicker = create<{ open: boolean }>(() => ({ open: false }));
+/** `saveAs`: the tab being saved (Save As… picks the type first); otherwise a new document. */
+const usePicker = create<{ open: boolean; saveAs: string | null }>(() => ({ open: false, saveAs: null }));
 
 /** ⇧⌘N / Ctrl+Shift+N: choose the type of a new document. */
-export const openTypePicker = () => usePicker.setState({ open: true });
-const close = () => usePicker.setState({ open: false });
+export const openTypePicker = () => usePicker.setState({ open: true, saveAs: null });
+/** Save As… (⇧⌘S): choose the file type, then where to save. The current type is preselected. */
+export const openSaveAsPicker = (id = useTabs.getState().activeId) => {
+  if (id && !useTabs.getState().tabs.find((t) => t.id === id)?.loading) usePicker.setState({ open: true, saveAs: id });
+};
+const close = () => usePicker.setState({ open: false, saveAs: null });
 
 /** A small, keyboard-first list: type to filter, ↑/↓ to move, Enter to create, Esc to cancel. */
 export function TypePicker() {
@@ -16,8 +22,10 @@ export function TypePicker() {
 }
 
 function Picker() {
+  const saveAs = usePicker((s) => s.saveAs);
+  const current = useTabs((s) => s.tabs.find((t) => t.id === saveAs)?.language);
   const [query, setQuery] = useState("");
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => Math.max(0, LANGUAGE_LIST.findIndex((l) => l.id === current)));
   const input = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
 
@@ -28,14 +36,20 @@ function Picker() {
   }, [query]);
 
   useEffect(() => input.current?.focus(), []);
-  useEffect(() => setIndex(0), [query]);
+  // Filtering starts at the top; until then the preselected (current) type stays.
+  const lastQuery = useRef(query);
+  useEffect(() => {
+    if (lastQuery.current !== query) setIndex(0);
+    lastQuery.current = query;
+  }, [query]);
   useEffect(() => {
     list.current?.children[index]?.scrollIntoView({ block: "nearest" });
   }, [index]);
 
   const choose = (id: LanguageId) => {
     close();
-    newTab(id);
+    if (saveAs) void saveTabAs(saveAs, id);
+    else newTab(id);
   };
 
   return (
@@ -43,7 +57,7 @@ function Picker() {
       <div
         className="picker"
         role="dialog"
-        aria-label="New file of type"
+        aria-label={saveAs ? "Save as type" : "New file of type"}
         onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
@@ -64,7 +78,7 @@ function Picker() {
         <input
           ref={input}
           className="picker-input"
-          placeholder="New file of type…"
+          placeholder={saveAs ? "Save as type… (Enter keeps the current type)" : "New file of type…"}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           spellCheck={false}

@@ -382,6 +382,22 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         file.append(&item("quit", "Exit", Some("CmdOrCtrl+Q"))?)?;
     }
 
+    // Find shortcuts follow each OS: macOS ⌥⌘F replace, ⌘G/⇧⌘G next/previous, ⌘E use selection;
+    // Windows/Linux Ctrl+H replace, F3/Shift+F3 next/previous.
+    let mac = cfg!(target_os = "macos");
+    let find_menu = Submenu::with_items(
+        app,
+        "Find",
+        true,
+        &[
+            &item("find", "Find…", Some("CmdOrCtrl+F"))?,
+            &item("find_replace", "Find and Replace…", Some(if mac { "Alt+Cmd+F" } else { "Ctrl+H" }))?,
+            &item("find_next", "Find Next", Some(if mac { "Cmd+G" } else { "F3" }))?,
+            &item("find_prev", "Find Previous", Some(if mac { "Shift+Cmd+G" } else { "Shift+F3" }))?,
+            &item("find_selection", "Use Selection for Find", if mac { Some("Cmd+E") } else { None })?,
+        ],
+    )?;
+
     // The predefined clipboard items are required on macOS for copy/paste to work in the webview.
     let edit = Submenu::with_items(
         app,
@@ -396,7 +412,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::paste(app, None)?,
             &PredefinedMenuItem::select_all(app, None)?,
             &PredefinedMenuItem::separator(app)?,
-            &item("find", "Find…", Some("CmdOrCtrl+F"))?,
+            &find_menu,
+            &item("select_column", "Select Column (CSV, Log)", Some("Ctrl+Space"))?,
             &item("format", "Format Document", Some("Shift+Alt+F"))?,
         ],
     )?;

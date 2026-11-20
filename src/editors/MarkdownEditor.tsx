@@ -79,9 +79,9 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
       md: createMdFormat(crepe),
       focus: () => (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus(),
       // Search lives in the source view.
-      find: () => {
+      find: (replace) => {
         toggleSource(tab.id);
-        setTimeout(() => activeEditor()?.find(), 50);
+        setTimeout(() => activeEditor()?.find(replace), 50);
       },
       replaceAll: () => false,
     });

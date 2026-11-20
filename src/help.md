@@ -14,14 +14,40 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 ## Markdown and HTML
 
 - Formatted editing: select text for a floating toolbar, type `/` for blocks, or use Markdown shortcuts (`## `, `- `, `> `, `**bold**`). The formatting bar under the tabs can be hidden in the View menu.
-- HTML files open in a **preview** (scripts don't run in it).
-- **⌘/** (Ctrl+/) switches between the formatted view or preview and the **source**. The status bar button does the same.
+- HTML files open in a **preview** (scripts don't run in it). While you edit the source, the status bar button says **Preview**; click it (or press ⌘/ · Ctrl+/) to see the page, and **Source** to go back.
+- **⌘/** (Ctrl+/) switches Markdown between the formatted view and the **source**.
 
 ## Code
 
 - Highlighting for JavaScript, HTML, CSV, log files, PowerShell, Perl, shell, batch (cmd/bat), INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. Change the language in the status bar.
 - **Format Document**: **⇧⌥F** (Shift+Alt+F). JavaScript, HTML, JSON, YAML, Markdown, INI and SQL are built in; shell, Perl and PowerShell use `shfmt`, `perltidy` and `PSScriptAnalyzer` when they are installed.
-- **Find**: **⌘F** (Ctrl+F).
+- **Save As…** (⇧⌘S · Ctrl+Shift+S) asks for the file type first (Enter keeps the current one), then where to save. Typing another known extension in the save dialog also works.
+
+## Find and replace
+
+| | macOS | Windows / Linux |
+|---|---|---|
+| Find | ⌘F | Ctrl+F |
+| Find and replace | ⌥⌘F | Ctrl+H |
+| Next / previous match | ⌘G / ⇧⌘G (or Enter / Shift+Enter in the find field) | F3 / Shift+F3 (or Enter / Shift+Enter) |
+| Use selection for find | ⌘E | — |
+| Select all matches (multiple cursors) | ⌥Enter in the find field | Alt+Enter in the find field |
+| Replace / replace all | Enter / ⌘Enter in the replace field | Enter / Ctrl+Enter in the replace field |
+| Close | Esc | Esc |
+
+- **Aa** matches case, **ab** whole words, **.\*** regular expressions (use `$1` in the replacement for groups; `\n` and `\t` work too).
+- **Find in selection** (the button with lines, right of the arrows) limits finding and replacing to the text that was selected, for example a column. It turns on by itself when you open Find with a selection over several lines.
+- The count shows which match is selected and how many there are.
+- In formatted Markdown and the HTML preview, Find switches to the source first.
+
+## Selecting CSV and log columns
+
+- **Ctrl+Space** (on macOS too, as in Excel) selects the column the cursor is in, on every line. Or **Alt/Option + double-click** a field.
+- Select across several fields first to select several columns at once.
+- Select several lines first (or a block with Alt+drag) to select only that part of the column.
+- Each line gets its own selection: copy gives one value per line, typing replaces the column on every line, and **Find and replace** with *Find in selection* changes values only in that column.
+- Log files: the detected columns (time, level, thread…) plus the message as the last column.
+- If Ctrl+Space switches your keyboard input source on macOS, use Edit → Select Column or Option + double-click.
 
 ## Column (block) selection
 

@@ -15,12 +15,11 @@ import {
   openFiles,
   openHelp,
   saveTab,
-  saveTabAs,
   showEncodingMenu,
   toggleSource,
 } from "./actions";
 import { openAbout } from "./About";
-import { openTypePicker } from "./TypePicker";
+import { openSaveAsPicker, openTypePicker } from "./TypePicker";
 import {
   openDialog,
   openRepoFolder,
@@ -55,10 +54,18 @@ const MENU: Record<string, () => unknown> = {
   new_of_type: openTypePicker,
   open: () => openFiles(),
   save: () => saveTab(),
-  save_as: () => saveTabAs(),
+  save_as: () => openSaveAsPicker(),
   close_tab: () => closeTab(),
   quit,
   find: () => activeEditor()?.find(),
+  find_replace: () => activeEditor()?.find(true),
+  find_next: () => activeEditor()?.findNext?.(1),
+  find_prev: () => activeEditor()?.findNext?.(-1),
+  find_selection: () => activeEditor()?.useSelectionForFind?.(),
+  select_column: () => {
+    const ed = activeEditor();
+    if (!ed?.selectColumn?.()) useTabs.getState().notify("Select Column works in CSV and log files (with columns).");
+  },
   format: formatActive,
   open_repo: openRepoFolder,
   new_repo: () => openDialog({ kind: "newRepo" }),

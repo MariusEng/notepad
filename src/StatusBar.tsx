@@ -1,6 +1,6 @@
 import { setLanguage, showEncodingMenu, toggleEol, toggleSource } from "./actions";
 import { encodingName } from "./editors/encodings";
-import { LANGUAGE_LIST, hasRenderedView, type LanguageId } from "./editors/languages";
+import { LANGUAGE_LIST, type LanguageId } from "./editors/languages";
 import { useTabs } from "./tabs/store";
 import { useGit } from "./git/store";
 import { showBranchMenu, syncNow, toggleSidebar } from "./git/actions";
@@ -100,9 +100,19 @@ export function StatusBar() {
           {tab.bom ? " BOM" : ""}
         </button>
       )}
-      {hasRenderedView(tab.language) && (
+      {tab.language === "markdown" && (
         <button className="sb-item sb-btn" onClick={() => toggleSource(tab.id)} title="Toggle source (⌘/ · Ctrl+/)">
-          {tab.mdSource ? "Source" : tab.language === "html" ? "Preview" : "Formatted"}
+          {tab.mdSource ? "Source" : "Formatted"}
+        </button>
+      )}
+      {tab.language === "html" && (
+        // HTML: the button says what it does: preview the page, or go back to its source.
+        <button
+          className="sb-item sb-btn"
+          onClick={() => toggleSource(tab.id)}
+          title={tab.mdSource ? "Preview the page (⌘/ · Ctrl+/)" : "Back to the source (⌘/ · Ctrl+/)"}
+        >
+          {tab.mdSource ? "Preview" : "Source"}
         </button>
       )}
       <label className="sb-item sb-select" title="Language">

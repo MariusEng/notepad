@@ -22,6 +22,11 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **CSV and log files** colour each column, so values that belong together share a colour on every line.
   CSV detects the delimiter (`,` `;` tab `|`) and bolds the header; logs detect their leading columns
   (timestamp, level, [thread], logger…) and tint error and warning lines.
+- **Find and replace** with OS shortcuts (⌘F/⌥⌘F/⌘G/⇧⌘G/⌘E on macOS; Ctrl+F/Ctrl+H/F3/Shift+F3 on Windows/Linux):
+  match count, case/word/regex, `$1` groups, and **find in selection** (e.g. replace only within a selected column).
+- **Select CSV/log columns**: Ctrl+Space (as in Excel) or Alt/Option+double-click selects the column(s) at the cursor on
+  every line, or only on the selected lines; each line gets its own cursor.
+- **Save As** asks for the file type first (current type preselected), then where to save.
 - **Column (block) selection**: Option+drag / Alt+drag with the mouse; ⇧⌥⌘+arrows (macOS) or Shift+Alt+arrows
   (Windows/Linux, also Ctrl+Shift+Alt+arrows) with the keyboard. Typing, deleting, copy and paste then work on every line.
 - **Encodings**: UTF-8 by default. A BOM is recognised (UTF-8, UTF-16 LE/BE); a file that isn't valid UTF-8 opens as
@@ -74,6 +79,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 | Format Document | ⇧⌥F | Shift+Alt+F |
 | Toggle source (Markdown, HTML) | ⌘/ | Ctrl+/ |
 | Show/hide repository sidebar | ⇧⌘E | Ctrl+Shift+E |
+| Find and replace | ⌥⌘F | Ctrl+H |
+| Find next / previous | ⌘G / ⇧⌘G | F3 / Shift+F3 |
+| Select CSV/log column | Ctrl+Space | Ctrl+Space |
 | Column selection (mouse) | Option+drag | Alt+drag |
 | Column selection (keyboard) | ⇧⌥⌘+arrows | Shift+Alt+arrows, Ctrl+Shift+Alt+arrows |
 | Add cursor above/below | ⌥⌘↑ / ⌥⌘↓ | Ctrl+Alt+↑ / ↓ |
@@ -111,6 +119,7 @@ src/
     languages/          language registry, batch mode, formatters, CSV/log column colouring (columns.ts)
   help.md               Help → Notepad Help (opens in a tab)
   editors/blockSelect.ts   column selection (mouse + keyboard)
+  editors/FindPanel.tsx    find and replace panel (CodeMirror search state, find in selection)
   editors/encodings.ts     encodings offered in File → Encoding
   About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following

@@ -12,12 +12,20 @@ import {
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, foldKeymap, indentOnInput, indentUnit } from "@codemirror/language";
-import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { findAndReplace, findStep, openFind, useSelectionForFind } from "./FindPanel";
+import { selectColumn } from "./languages/columns";
 import { LANGUAGES } from "./languages";
 import { cmHighlight, cmTheme } from "./cmTheme";
 import { registerEditor } from "./handle";
 import { columnSelection } from "./blockSelect";
 import { useTabs, type Tab } from "../tabs/store";
+
+function selectColumnNotify(view: EditorView): boolean {
+  const r = selectColumn(view);
+  if (r === "too-many") useTabs.getState().notify("That column has too many lines to select at once (over 200,000). Select fewer lines first.", "error");
+  return r !== false;
+}
 
 /** Uncontrolled: it reads the tab once on mount. The parent remounts it (via `key`)
  *  when the tab, its language or its version changes. */
@@ -67,8 +75,10 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         columnSelection(),
         highlightActiveLine(),
         highlightSelectionMatches(),
-        search({ top: true }),
+        findAndReplace(),
         indentUnit.of(tab.language === "yaml" || tab.language === "json" ? "  " : "    "),
+        // Ctrl+Space selects the column in CSV and log files (Excel's shortcut, on macOS too).
+        keymap.of([{ key: "Ctrl-Space", run: (v) => selectColumnNotify(v) }]),
         keymap.of([...defaultKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
         lang.wrap ? EditorView.lineWrapping : [],
         cmTheme,
@@ -90,6 +100,14 @@ export function CodeEditor({ tab }: { tab: Tab }) {
           }
         }),
         EditorView.domEventHandlers({
+          // Alt/Option + double-click on a CSV or log field selects its whole column.
+          dblclick(e, view) {
+            if (!e.altKey) return false;
+            const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+            if (pos === null) return false;
+            e.preventDefault();
+            return selectColumn(view, pos) === true;
+          },
           focus(_e, view) {
             reportStatus(view.state);
           },
@@ -117,10 +135,10 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     const unregister = registerEditor(tab.id, {
       flush,
       focus: () => view.focus(),
-      find: () => {
-        view.focus();
-        openSearchPanel(view);
-      },
+      find: (replace) => openFind(view, !!replace),
+      findNext: (dir) => findStep(view, dir),
+      useSelectionForFind: () => useSelectionForFind(view),
+      selectColumn: () => selectColumnNotify(view),
       replaceAll: (text) => {
         view.dispatch({
           changes: { from: 0, to: view.state.doc.length, insert: text },

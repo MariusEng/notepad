@@ -1,4 +1,4 @@
-import { RangeSetBuilder, type Extension, type Text } from "@codemirror/state";
+import { EditorSelection, Facet, RangeSetBuilder, type Extension, type SelectionRange, type Text } from "@codemirror/state";
 import { Decoration, EditorView, ViewPlugin, type DecorationSet, type ViewUpdate } from "@codemirror/view";
 
 /**
@@ -206,10 +206,98 @@ function columnPlugin(build: (view: EditorView) => DecorationSet): Extension {
 
 export const csvColumns = (doc: string): Extension => {
   const delim = detectDelimiter(doc);
-  return columnPlugin((view) => csvDecorations(view, delim));
+  return [columnPlugin((view) => csvDecorations(view, delim)), columnInfo.of({ kind: "csv", delim })];
 };
 
 export const logColumns = (doc: string): Extension => {
   const cols = detectLogColumns(doc);
-  return columnPlugin((view) => logDecorations(view, cols));
+  return [columnPlugin((view) => logDecorations(view, cols)), columnInfo.of({ kind: "log", cols })];
 };
+
+// ---------------------------------------------------------------- selecting columns
+
+type ColumnInfo = { kind: "csv"; delim: string } | { kind: "log"; cols: number };
+
+/** How the open document is split into columns (only CSV and log editors have this). */
+export const columnInfo = Facet.define<ColumnInfo, ColumnInfo | null>({ combine: (v) => v[0] ?? null });
+
+/** Field i of a line as [start, end) offsets, for every field; null for lines without columns. */
+function fieldsOf(text: string, info: ColumnInfo): [number, number][] | null {
+  if (info.kind === "csv") {
+    const out: [number, number][] = [];
+    let start = 0;
+    for (const cut of splitPoints(text, info.delim)) {
+      out.push([start, cut]);
+      start = cut + 1;
+    }
+    out.push([start, text.length]);
+    return out;
+  }
+  // Logs: the detected columns, then the message as one last column. Continuation lines have none.
+  if (!text || /^\s/.test(text) || info.cols === 0) return null;
+  const out: [number, number][] = [];
+  FIELD.lastIndex = 0;
+  for (let m: RegExpExecArray | null; out.length < info.cols && (m = FIELD.exec(text)); ) out.push([m.index, m.index + m[0].length]);
+  if (out.length < info.cols) return out;
+  const rest = /\S/.exec(text.slice(out[out.length - 1][1]));
+  if (rest) out.push([out[out.length - 1][1] + rest.index, text.length]);
+  return out;
+}
+
+/** The column an offset in a line belongs to (a delimiter belongs to the column before it). */
+function fieldAt(fields: [number, number][], offset: number): number {
+  let i = 0;
+  while (i < fields.length - 1 && offset > fields[i][1]) i++;
+  return i;
+}
+
+const MAX_COLUMN_LINES = 200_000;
+
+/**
+ * Selects whole columns (Ctrl+Space, like Excel): the columns the selection touches, on every line; or only on
+ * the selected lines when the selection covers several lines (part of a column). Returns false when the
+ * document has no columns. Each line gets its own selection range, so typing, copying and pasting work per line.
+ */
+export function selectColumn(view: EditorView, at?: number): boolean | "too-many" {
+  const info = view.state.facet(columnInfo);
+  if (!info) return false;
+  const { state } = view;
+  const doc = state.doc;
+  const sel = state.selection;
+  const ranges: readonly SelectionRange[] = at === undefined ? sel.ranges : [EditorSelection.cursor(at)];
+  const first = doc.lineAt(Math.min(...ranges.map((r) => r.from)));
+  const last = doc.lineAt(Math.max(...ranges.map((r) => r.to)));
+
+  // Which columns: from the column at the start of the selection to the one at its end.
+  let lo = Infinity;
+  let hi = -1;
+  for (const r of ranges) {
+    for (const pos of [r.from, r.to]) {
+      const line = doc.lineAt(pos);
+      const f = fieldsOf(line.text, info);
+      if (!f?.length) continue;
+      const i = fieldAt(f, pos - line.from);
+      lo = Math.min(lo, i);
+      hi = Math.max(hi, i);
+    }
+  }
+  if (hi < 0) return false;
+
+  // Which lines: all of them, unless the selection already covers several.
+  const [top, bottom] = first.number === last.number ? [1, doc.lines] : [first.number, last.number];
+  if (bottom - top + 1 > MAX_COLUMN_LINES) return "too-many";
+  const out: SelectionRange[] = [];
+  let mainIndex = 0;
+  for (let n = top; n <= bottom; n++) {
+    const line = doc.line(n);
+    const f = fieldsOf(line.text, info);
+    if (!f || f.length <= lo) continue;
+    const a = f[lo];
+    const z = f[Math.min(hi, f.length - 1)];
+    if (n === doc.lineAt(sel.main.head).number) mainIndex = out.length;
+    out.push(EditorSelection.range(line.from + a[0], line.from + z[1]));
+  }
+  if (!out.length) return false;
+  view.dispatch({ selection: EditorSelection.create(out, mainIndex), userEvent: "select.column", scrollIntoView: true });
+  return true;
+}

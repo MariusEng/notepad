@@ -3,7 +3,7 @@ import helpText from "./help.md?raw";
 import { LARGE_FILE_BYTES, backend, type FileData } from "./lib/backend";
 import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
-import { LANGUAGES, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
+import { LANGUAGES, LANGUAGE_LIST, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
 import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
 
 const store = () => useTabs.getState();
@@ -174,25 +174,38 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
   }
 }
 
-export async function saveTabAs(id = store().activeId): Promise<boolean> {
+/**
+ * Save As. `language` is the file type chosen first (Save As… shows the type picker); the dialog then suggests
+ * the name with that type's extension. Typing another known extension in the dialog wins.
+ */
+export async function saveTabAs(id = store().activeId, language?: LanguageId): Promise<boolean> {
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return false;
-  const lang = LANGUAGES[tab.language];
+  const chosen = language ?? tab.language;
+  const lang = LANGUAGES[chosen];
+  const ext = lang.extensions[0];
+  // "notes.txt" saved as Markdown → suggest "notes.md" (an extension of the chosen type is kept).
+  const current = tab.path ?? tab.title;
+  const dot = fileName(current).lastIndexOf(".");
+  const curExt = dot > 0 ? fileName(current).slice(dot + 1).toLowerCase() : "";
+  const suggested = lang.extensions.includes(curExt) ? current : (dot > 0 ? current.slice(0, current.length - (fileName(current).length - dot)) : current) + "." + ext;
   const path = await save({
-    title: "Save As",
-    defaultPath: tab.path ?? tab.title,
+    title: `Save As ${lang.label}`,
+    defaultPath: suggested,
     filters: [
       { name: lang.label, extensions: lang.extensions },
       { name: "All Files", extensions: ["*"] },
     ],
   });
   if (!path) return false;
-  const language: LanguageId = detectLanguage(path, tab.content);
-  store().update(tab.id, { path, title: fileName(path), language });
+  const typed = detectLanguage(path, tab.content);
+  const byExt = LANGUAGE_LIST.some((l) => l.extensions.includes(fileName(path).split(".").pop()!.toLowerCase()));
+  const newLanguage: LanguageId = byExt ? typed : chosen;
+  store().update(tab.id, { path, title: fileName(path), language: newLanguage, ...(newLanguage === "html" && tab.language !== "html" ? { mdSource: true } : {}) });
   const ok = await saveTab(tab.id);
   // Remount the editor if the language changed (e.g. .md saved as .txt).
-  if (ok && language !== tab.language) store().replaceContent(tab.id, store().tabs.find((t) => t.id === tab.id)!.content);
+  if (ok && newLanguage !== tab.language) store().replaceContent(tab.id, store().tabs.find((t) => t.id === tab.id)!.content);
   return ok;
 }
 

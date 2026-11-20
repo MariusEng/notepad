@@ -36,7 +36,14 @@ export interface EditorHandle {
   /** Present only in the formatted Markdown editor; the formatting bar is disabled without it. */
   md?: MdFormat;
   focus(): void;
-  find(): void;
+  /** Opens Find (with the Replace row when `replace`). */
+  find(replace?: boolean): void;
+  /** Find Next / Previous (⌘G / F3). */
+  findNext?(dir: 1 | -1): void;
+  /** ⌘E: use the selected text as the search text. */
+  useSelectionForFind?(): void;
+  /** CSV/log: select the column(s) at the selection (Ctrl+Space). False when the file has no columns. */
+  selectColumn?(): boolean;
   /** Replace the whole document as one undoable edit. Returns false if unsupported. */
   replaceAll(text: string): boolean;
   /** Big documents copy their text into the tab store lazily; this does it now. */

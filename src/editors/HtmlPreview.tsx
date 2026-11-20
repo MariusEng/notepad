@@ -15,9 +15,9 @@ export function HtmlPreview({ tab }: { tab: Tab }) {
       registerEditor(tab.id, {
         focus: () => frame.current?.focus(),
         // Search and Format Document work on the source.
-        find: () => {
+        find: (replace) => {
           toggleSource(tab.id);
-          setTimeout(() => activeEditor()?.find(), 50);
+          setTimeout(() => activeEditor()?.find(replace), 50);
         },
         replaceAll: () => false,
       }),

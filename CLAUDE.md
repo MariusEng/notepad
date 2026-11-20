@@ -23,6 +23,13 @@ the features, shortcuts and file layout.
   with a notice. File → Encoding… / tab menu / status bar: Reopen with Encoding, Save with Encoding, UTF-8 BOM.
   Decoding in the frontend (TextDecoder, chunked), encoding in Rust (`encode_text`, encoding_rs; UTF-16 by hand;
   unmappable characters are refused, never replaced). `tab.encoding` is persisted; `tab.lossy` asks before saving.
+- Find and replace (`editors/FindPanel.tsx`, CodeMirror `search({createPanel})` with a React panel): OS-default
+  shortcuts via the native Edit → Find submenu (macOS ⌘F ⌥⌘F ⌘G ⇧⌘G ⌘E; Win/Linux Ctrl+F Ctrl+H F3 Shift+F3), match
+  count, case/word/regex, find-in-selection scope (StateField, auto-on for multi-line/multi-range selections).
+- CSV/log "Select Column" (`selectColumn` in columns.ts, `columnInfo` facet): Ctrl+Space (Excel) / Alt+double-click;
+  whole column, several columns, or part of a column (selected lines); one range per line, capped at 200k lines.
+- Save As… shows the type picker first (TypePicker `saveAs` mode), then the native dialog: macOS's save panel
+  (rfd) has no file-type popup. HTML status bar button names the action: "Preview" in source, "Source" in preview.
 - Help → Notepad Help (`src/help.md`, opens in a tab) and an About dialog listing open source components and that
   the app is built with Claude. Keep both up to date when features or dependencies change.
 - Hot exit: closing the app never prompts; tabs and unsaved edits are restored on launch.
@@ -105,8 +112,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20, version 0.7.0)
-Latest (0.7.0): column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-20, version 0.8.0)
+Latest (0.8.0): find and replace panel (OS shortcuts, find in selection), CSV/log Select Column, Save As picks the type, HTML Preview/Source button. 0.7.0: column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown
@@ -121,7 +128,7 @@ narrow-window layout. The user is reviewing the UI.
 
 Compiled on the Mac (0.7.0): `cargo test` passes 17 tests (incl. branches, encodings), `npm run typecheck` and `npm run build`
 are clean. Not yet run with `npm run tauri dev` this session: check tab dragging, the branch menu, the HTML
-preview, CSV/log colours, a big file (e.g. a 200 MB log), column selection and Reopen/Save with Encoding by eye.
+preview, CSV/log colours, a big file (e.g. a 200 MB log), column selection, Reopen/Save with Encoding, the find panel, Ctrl+Space column select and Save As by eye.
 
 Untested against real servers: browser sign-in on git.1011.no (Forgejo built-in client id
 a4792ccc-144e-407e-86c9-5e7d8d9c3269, redirect http://127.0.0.1:51789), GitHub device flow with the GitHub CLI
