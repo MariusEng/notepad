@@ -7,7 +7,7 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - **⌘N** (Ctrl+N) opens a new Markdown document. **⇧⌘N** (Ctrl+Shift+N) asks for the file type first.
 - **Drag tabs** to reorder them. Middle-click closes a tab. Right-click a tab for more: Open to the Right, Close Others, File Type, Copy Path.
 - Switch tabs with **Ctrl+Tab** / **Ctrl+Shift+Tab**, or **⌘1–⌘8** (Ctrl+1–8), **⌘9** for the last tab.
-- **Split view**: right-click a tab → *Open to the Right*. The two tabs shown side by side are framed together in the tab bar and move as one when you drag them. Drag the divider to resize; double-click it to reset.
+- **Split view**: right-click a tab → *Open to the Right*. The two tabs shown side by side move to the right end of the tab bar, framed together, and stay there (also when you switch which file a pane shows). Drag the divider to resize; double-click it to reset.
 - **Hot exit**: quit at any time. Tabs, unsaved edits and untitled documents come back on the next launch.
 - If a file changes in another program, a clean tab reloads by itself; with unsaved edits a banner lets you choose.
 

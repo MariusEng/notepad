@@ -82,8 +82,9 @@ the features, shortcuts and file layout.
   and external reload. Cap 512 MB (whole text is in memory: CodeMirror + store). CodeEditor copies big docs
   (> 2 M chars) into the store only when typing pauses; call `flushEdits()` (editors/handle.ts) before reading
   `tab.content` (save, format, session write, toggles). Markdown > 1 MB opens in source view.
-- Tab order: the split pair (mainId, splitId) is kept adjacent by `pairUp` in tabs/store.ts; the tab bar drags
-  groups with pointer events (HTML5 DnD doesn't work while `dragDropEnabled` is on).
+- Tab order: the split pair (mainId, splitId) is kept together at the RIGHT END of the strip by `pairUp` in
+  tabs/store.ts (user's request; sticky at the right edge when tabs overflow, not draggable). The tab bar drags
+  other tabs with pointer events (HTML5 DnD doesn't work while `dragDropEnabled` is on).
 - CSV/log colouring (`editors/languages/columns.ts`) decorates only visible lines; `LanguageInfo.load(doc)` gets
   the initial text so it can detect the CSV delimiter / log columns. Colours are `--col-0..7`, `--log-*` tokens.
 - Git branches: `list_branches`, `switch_branch` (safe checkout, refuses to overwrite local changes),
@@ -112,8 +113,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20, version 0.8.0)
-Latest (0.8.0): find and replace panel (OS shortcuts, find in selection), CSV/log Select Column, Save As picks the type, HTML Preview/Source button. 0.7.0: column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-21, version 0.8.1)
+Latest (0.8.1): split-view pair moves to the right end of the tab bar and stays there. 0.8.0: find and replace panel (OS shortcuts, find in selection), CSV/log Select Column, Save As picks the type, HTML Preview/Source button. 0.7.0: column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown
@@ -142,6 +143,11 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
+- **TODO (user request): optimise memory use; the app should be very lightweight.** Ideas: keep only one copy of
+  big documents (today the text is in CodeMirror *and* the tab store, plus the session's `written` map), keep
+  background tabs' text out of the JS heap (drop to disk/buffers and reload on activation), unmount hidden editors
+  (already: only visible panes mount), lazy-load Milkdown/Prettier/language packs (partly done), measure with
+  Activity Monitor / WebKit's memory timeline first (WKWebView content process + Rust process).
 - **TODO (user request): delete files in a git repository**: e.g. right-click a file in the repo sidebar → Delete,
   with a confirmation; commit the deletion and push (`gitops::commit_file` already writes "Delete <file>" when the
   file is gone), and close or mark its open tab.

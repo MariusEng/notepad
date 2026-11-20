@@ -57,7 +57,7 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **Branches**: click the repository name (sidebar) or the branch (status bar) to switch branch, create one,
   or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
   unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
-- **Tabs**: drag to reorder (the two tabs of a split view stay together and move as one), middle-click to close, right-click for more, including **File Type**
+- **Tabs**: drag to reorder (the two tabs of a split view sit together at the right end of the tab bar), middle-click to close, right-click for more, including **File Type**
   to change the type of a tab (an untitled file also gets the new extension).
 - **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.
 - **Changes from other programs**: clean tabs reload automatically when the file changes on disk.

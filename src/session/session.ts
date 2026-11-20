@@ -168,7 +168,7 @@ export async function restoreSession(): Promise<boolean> {
   }
   const saved = session?.activeId;
   const activeId = saved && (saved === mainId || saved === splitId) ? saved : mainId;
-  useTabs.setState({ tabs: pairUp(tabs, mainId, splitId, "main"), activeId, mainId, splitId });
+  useTabs.setState({ tabs: pairUp(tabs, mainId, splitId), activeId, mainId, splitId });
   return true;
 }
 

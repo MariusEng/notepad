@@ -164,7 +164,8 @@ export function TabBar() {
     // Activating can pair the tab with the other pane's tab, so look the group up afterwards.
     const s = useTabs.getState();
     const group = groupsOf(s.tabs, s.mainId, s.splitId).find((g) => g.some((t) => t.id === tab.id));
-    if (!group) return;
+    // The split pair is pinned to the right end; only other tabs are dragged.
+    if (!group || group.length > 1) return;
     drag.current = { ids: group.map((t) => t.id), startX: e.clientX, x: e.clientX, grab: 0, shift: 0, started: false };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -228,7 +229,7 @@ export function TabBar() {
             key={group[0].id}
             data-group={group[0].id}
             className={`tab-group${group.length > 1 ? " pair" : ""}${dragKey === group[0].id ? " dragging" : ""}`}
-            title={group.length > 1 ? "Shown side by side" : undefined}
+            title={group.length > 1 ? "Shown side by side (kept at the right)" : undefined}
           >
             {group.map(renderTab)}
           </div>
