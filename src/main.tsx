@@ -33,6 +33,7 @@ const MENU: Record<string, () => unknown> = {
   quit,
   find: () => activeEditor()?.find(),
   format: formatActive,
+  close_split: () => useTabs.getState().closeSplit(),
   toggle_source: () => toggleMarkdownSource(),
   next_tab: () => useTabs.getState().cycle(1),
   prev_tab: () => useTabs.getState().cycle(-1),

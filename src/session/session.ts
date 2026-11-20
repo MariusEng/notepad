@@ -31,6 +31,9 @@ interface SessionTab {
 interface Session {
   version: 1;
   activeId: string | null;
+  /** Tabs in the left and right panes (right = split view). Older sessions only have activeId. */
+  mainId?: string | null;
+  splitId?: string | null;
   tabs: SessionTab[];
 }
 
@@ -43,7 +46,7 @@ let restored = false;
 const needsBuffer = (t: Tab) => t.dirty || (t.path === null && t.content !== "");
 
 async function writeSession() {
-  const { tabs, activeId } = useTabs.getState();
+  const { tabs, activeId, mainId, splitId } = useTabs.getState();
   const keep: string[] = [];
   for (const t of tabs) {
     if (!needsBuffer(t)) continue;
@@ -56,6 +59,8 @@ async function writeSession() {
   const session: Session = {
     version: 1,
     activeId,
+    mainId,
+    splitId,
     tabs: tabs.map((t) => ({
       id: t.id,
       path: t.path,
@@ -136,15 +141,31 @@ export async function restoreSession(): Promise<boolean> {
 
   restored = true;
   if (!tabs.length) return false;
-  const activeId = tabs.some((t) => t.id === session?.activeId) ? session!.activeId : tabs[0].id;
-  useTabs.setState({ tabs, activeId });
+  const has = (id?: string | null) => !!id && tabs.some((t) => t.id === id);
+  let splitId = has(session?.splitId) ? session!.splitId! : null;
+  let mainId =
+    [session?.mainId, session?.activeId].find((id) => has(id) && id !== splitId) ??
+    tabs.find((t) => t.id !== splitId)?.id ??
+    null;
+  if (!mainId) {
+    mainId = splitId; // only one tab: no split
+    splitId = null;
+  }
+  const saved = session?.activeId;
+  const activeId = saved && (saved === mainId || saved === splitId) ? saved : mainId;
+  useTabs.setState({ tabs, activeId, mainId, splitId });
   return true;
 }
 
 /** Start autosaving the session whenever tabs change. Call after restoreSession(). */
 export function startSessionAutosave() {
   useTabs.subscribe((state, prev) => {
-    if (restored && (state.tabs !== prev.tabs || state.activeId !== prev.activeId)) scheduleSave();
+    const changed =
+      state.tabs !== prev.tabs ||
+      state.activeId !== prev.activeId ||
+      state.mainId !== prev.mainId ||
+      state.splitId !== prev.splitId;
+    if (restored && changed) scheduleSave();
   });
 }
 

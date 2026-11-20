@@ -17,7 +17,7 @@ import { bracketMatching, foldKeymap, indentOnInput, indentUnit } from "@codemir
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { LANGUAGES } from "./languages";
 import { cmHighlight, cmTheme } from "./cmTheme";
-import { setActiveEditor } from "./handle";
+import { registerEditor } from "./handle";
 import { useTabs, type Tab } from "../tabs/store";
 
 /** Uncontrolled: it reads the tab once on mount. The parent remounts it (via `key`)
@@ -32,6 +32,8 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     let scrollTimer: ReturnType<typeof setTimeout> | undefined;
 
     const reportStatus = (state: EditorState) => {
+      // Only the focused pane drives the status bar.
+      if (useTabs.getState().activeId !== tab.id) return;
       const sel = state.selection.main;
       const line = state.doc.lineAt(sel.head);
       setStatus({ line: line.number, col: sel.head - line.from + 1, selected: Math.abs(sel.to - sel.from) });
@@ -69,6 +71,9 @@ export function CodeEditor({ tab }: { tab: Tab }) {
           }
         }),
         EditorView.domEventHandlers({
+          focus(_e, view) {
+            reportStatus(view.state);
+          },
           scroll(_e, view) {
             clearTimeout(scrollTimer);
             scrollTimer = setTimeout(() => update(tab.id, { scroll: view.scrollDOM.scrollTop }), 250);
@@ -83,14 +88,14 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     // Restore scroll after layout, and load the language grammar lazily.
     requestAnimationFrame(() => {
       view.scrollDOM.scrollTop = tab.scroll;
-      view.focus();
+      if (useTabs.getState().activeId === tab.id) view.focus();
     });
     let cancelled = false;
     lang.load().then((ext) => {
       if (!cancelled) view.dispatch({ effects: language.reconfigure(ext) });
     });
 
-    setActiveEditor({
+    const unregister = registerEditor(tab.id, {
       focus: () => view.focus(),
       find: () => {
         view.focus();
@@ -108,7 +113,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     return () => {
       cancelled = true;
       clearTimeout(scrollTimer);
-      setActiveEditor(null);
+      unregister();
       view.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -3,7 +3,7 @@ import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "./markdown.css";
 import { cmHighlight, cmTheme } from "./cmTheme";
-import { activeEditor, setActiveEditor } from "./handle";
+import { activeEditor, registerEditor } from "./handle";
 import { useTabs, type Tab } from "../tabs/store";
 import { toggleMarkdownSource } from "../actions";
 import { createMdFormat } from "./mdFormat";
@@ -70,10 +70,12 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
       if (destroyed) return;
       baseline = crepe.getMarkdown();
       if (scroller.current) scroller.current.scrollTop = tab.scroll;
-      (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus({ preventScroll: true });
+      if (useTabs.getState().activeId === tab.id) {
+        (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus({ preventScroll: true });
+      }
     });
 
-    setActiveEditor({
+    const unregister = registerEditor(tab.id, {
       md: createMdFormat(crepe),
       focus: () => (host.current?.querySelector(".ProseMirror") as HTMLElement | null)?.focus(),
       // Search lives in the source view.
@@ -96,7 +98,7 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
       destroyed = true;
       clearTimeout(scrollTimer);
       el?.removeEventListener("scroll", onScroll);
-      setActiveEditor(null);
+      unregister();
       crepe.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -343,6 +343,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         &[
             &item("toggle_source", "Toggle Markdown Source", Some("CmdOrCtrl+/"))?,
             &item("toggle_format_bar", "Show/Hide Formatting Bar", None)?,
+            &item("close_split", "Close Split View", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("next_tab", "Next Tab        Ctrl+Tab", None)?,
             &item("prev_tab", "Previous Tab    Ctrl+Shift+Tab", None)?,

@@ -40,6 +40,11 @@ the features, shortcuts and file layout.
   file doesn't mark it dirty. Keep that behaviour.
 - All colours are CSS variables in `src/theme/tokens.css`; CodeMirror and Crepe both read them.
 
+- Split view: `mainId` (left pane), `splitId` (right pane, null = no split) and `activeId` (focused pane's
+  tab) in the tab store; invariant: activeId is mainId or splitId, and a tab is never in both panes.
+  Editors register per tab id in `editors/handle.ts` (`activeEditor()` = the focused one); only the
+  focused pane's editor autofocuses or reports to the status bar. The session saves mainId/splitId.
+
 ## Gotchas found so far
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
@@ -61,8 +66,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20, version 0.2.0)
-Latest (0.2.0): new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-20, version 0.3.0)
+Latest (0.3.0): split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown

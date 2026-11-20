@@ -25,6 +25,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   - PowerShell: `Install-Module PSScriptAnalyzer` (in `pwsh`)
 - **Hot exit**: close the app at any time. Open tabs, unsaved edits and untitled documents
   are restored on the next launch, with cursor and scroll position.
+- **Split view**: right-click a tab → **Open to the Right** to see two files side by side
+  (drag the divider to resize, double-click it to reset; **Close Split View** in the tab menu or View menu).
+  The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
 - **Tabs**: drag to reorder, middle-click to close, right-click for more, including **File Type**
   to change the type of a tab (an untitled file also gets the new extension).
 - **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.

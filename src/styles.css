@@ -403,3 +403,47 @@ select {
   padding: 8px 10px;
   color: var(--faint);
 }
+
+/* ---------- split view ---------- */
+
+.panes {
+  display: grid;
+  height: 100%;
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-top: 2px solid transparent;
+}
+.pane.split.focused {
+  border-top-color: var(--accent);
+}
+.pane-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.pane-fill {
+  position: absolute;
+  inset: 0;
+}
+.pane-divider {
+  position: relative;
+  background: var(--border);
+  cursor: col-resize;
+}
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  inset: 0 -3px;
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.tab.in-split {
+  color: var(--muted);
+  background: var(--bg-subtle);
+}

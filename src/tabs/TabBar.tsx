@@ -5,8 +5,17 @@ import { LANGUAGE_LIST } from "../editors/languages";
 import { useTabs, type Tab } from "./store";
 
 async function showTabMenu(tab: Tab) {
+  const { tabs, splitId } = useTabs.getState();
   const menu = await Menu.new({
     items: [
+      {
+        id: "split-right",
+        text: "Open to the Right",
+        enabled: tabs.length > 1 && tab.id !== splitId,
+        action: () => useTabs.getState().openInSplit(tab.id),
+      },
+      { id: "split-close", text: "Close Split View", enabled: !!splitId, action: () => useTabs.getState().closeSplit() },
+      { item: "Separator" },
       { id: "close", text: "Close", action: () => closeTab(tab.id) },
       { id: "close-others", text: "Close Others", action: () => closeOtherTabs(tab.id) },
       { id: "close-right", text: "Close to the Right", action: () => closeOtherTabs(tab.id, true) },
@@ -37,6 +46,8 @@ async function showTabMenu(tab: Tab) {
 export function TabBar() {
   const tabs = useTabs((s) => s.tabs);
   const activeId = useTabs((s) => s.activeId);
+  const mainId = useTabs((s) => s.mainId);
+  const splitId = useTabs((s) => s.splitId);
   const setActive = useTabs((s) => s.setActive);
   const move = useTabs((s) => s.move);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -68,7 +79,7 @@ export function TabBar() {
             role="tab"
             aria-selected={tab.id === activeId}
             title={tab.path ?? tab.title}
-            className={`tab${tab.id === activeId ? " active" : ""}${tab.dirty ? " dirty" : ""}${dragId === tab.id ? " dragging" : ""}`}
+            className={`tab${tab.id === activeId ? " active" : ""}${splitId && tab.id !== activeId && (tab.id === mainId || tab.id === splitId) ? " in-split" : ""}${tab.dirty ? " dirty" : ""}${dragId === tab.id ? " dragging" : ""}`}
             draggable
             onDragStart={(e) => {
               setDragId(tab.id);
