@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Menu } from "@tauri-apps/api/menu";
-import { closeOtherTabs, closeTab, newTab, saveTab, setLanguage } from "../actions";
+import { closeOtherTabs, closeTab, encodingMenuItems, newTab, saveTab, setLanguage } from "../actions";
 import { LANGUAGE_LIST } from "../editors/languages";
 import { useTabs, type Tab } from "./store";
 
@@ -30,6 +30,7 @@ async function showTabMenu(tab: Tab) {
           action: () => setLanguage(tab.id, l.id),
         })),
       },
+      { id: "encoding", text: "Encoding", items: encodingMenuItems(tab) },
       { item: "Separator" },
       { id: "save", text: "Save", action: () => saveTab(tab.id) },
       {

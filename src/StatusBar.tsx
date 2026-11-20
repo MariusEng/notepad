@@ -1,4 +1,5 @@
-import { setLanguage, toggleEol, toggleSource } from "./actions";
+import { setLanguage, showEncodingMenu, toggleEol, toggleSource } from "./actions";
+import { encodingName } from "./editors/encodings";
 import { LANGUAGE_LIST, hasRenderedView, type LanguageId } from "./editors/languages";
 import { useTabs } from "./tabs/store";
 import { useGit } from "./git/store";
@@ -89,7 +90,16 @@ export function StatusBar() {
           CRLF
         </button>
       )}
-      {tab.bom && <span className="sb-item">BOM</span>}
+      {(tab.encoding !== "utf-8" || tab.bom) && (
+        <button
+          className={`sb-item sb-btn${tab.lossy ? " sb-warn" : ""}`}
+          title={`${encodingName(tab.encoding, false)}${tab.bom ? " with BOM" : ""}${tab.lossy ? " (some bytes couldn't be read)" : ""}. Click to reopen or save with another encoding.`}
+          onClick={() => void showEncodingMenu(tab.id)}
+        >
+          {encodingName(tab.encoding)}
+          {tab.bom ? " BOM" : ""}
+        </button>
+      )}
       {hasRenderedView(tab.language) && (
         <button className="sb-item sb-btn" onClick={() => toggleSource(tab.id)} title="Toggle source (⌘/ · Ctrl+/)">
           {tab.mdSource ? "Source" : tab.language === "html" ? "Preview" : "Formatted"}

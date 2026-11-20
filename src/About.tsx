@@ -18,6 +18,7 @@ const COMPONENTS: { name: string; use: string; license: string; url: string }[] 
   { name: "Zustand", use: "app state", license: "MIT", url: "https://github.com/pmndrs/zustand" },
   { name: "libgit2 and git2-rs", use: "git repositories", license: "GPL-2.0 with linking exception / MIT, Apache-2.0", url: "https://libgit2.org" },
   { name: "OpenSSL", use: "HTTPS for git (macOS and Linux)", license: "Apache-2.0", url: "https://www.openssl.org" },
+  { name: "encoding_rs", use: "saving in other text encodings", license: "MIT / Apache-2.0", url: "https://github.com/hsivonen/encoding_rs" },
   { name: "keyring-rs", use: "storing sign-ins in the system keychain", license: "MIT / Apache-2.0", url: "https://github.com/hwchen/keyring-rs" },
   { name: "ureq, url, serde, RustCrypto sha2, base64, getrandom", use: "web requests and data handling", license: "MIT / Apache-2.0", url: "https://crates.io" },
   { name: "Vite and TypeScript", use: "build tools", license: "MIT / Apache-2.0", url: "https://vite.dev" },

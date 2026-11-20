@@ -81,14 +81,52 @@ fn read_file_range(path: String, offset: u64, len: u64) -> Result<tauri::ipc::Re
     Ok(tauri::ipc::Response::new(buf))
 }
 
+/// Text → bytes in `encoding` (a WHATWG label such as "utf-8", "windows-1252", "utf-16le", "shift_jis").
+/// Refuses characters the encoding can't represent rather than writing a damaged file.
+fn encode_text(content: &str, encoding: &str, bom: bool) -> Result<Vec<u8>, String> {
+    let label = encoding.trim().to_ascii_lowercase();
+    let mut data = Vec::with_capacity(content.len() + 3);
+    match label.as_str() {
+        "" | "utf-8" | "utf8" => {
+            if bom {
+                data.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+            }
+            data.extend_from_slice(content.as_bytes());
+        }
+        // encoding_rs only decodes UTF-16, so encode it here. UTF-16 files normally start with a BOM.
+        "utf-16le" | "utf-16" | "utf-16be" => {
+            let be = label == "utf-16be";
+            if bom {
+                data.extend_from_slice(if be { &[0xFE, 0xFF] } else { &[0xFF, 0xFE] });
+            }
+            for unit in content.encode_utf16() {
+                data.extend_from_slice(&if be { unit.to_be_bytes() } else { unit.to_le_bytes() });
+            }
+        }
+        _ => {
+            let enc = encoding_rs::Encoding::for_label(label.as_bytes()).ok_or(format!("Unknown encoding {encoding}"))?;
+            let (bytes, _, unmappable) = enc.encode(content);
+            if unmappable {
+                let bad: String = content
+                    .chars()
+                    .filter(|c| enc.encode(&c.to_string()).2)
+                    .take(5)
+                    .collect();
+                return Err(format!(
+                    "Some characters ({bad}) can't be saved as {}. Save with UTF-8 instead (status bar or tab menu → Encoding).",
+                    enc.name()
+                ));
+            }
+            data.extend_from_slice(&bytes);
+        }
+    }
+    Ok(data)
+}
+
 /// Writes in place (rather than temp + rename) so file permissions such as +x are kept.
 #[tauri::command]
-fn write_file(path: String, content: String, bom: bool) -> Result<Option<u64>, String> {
-    let mut data = Vec::with_capacity(content.len() + 3);
-    if bom {
-        data.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-    }
-    data.extend_from_slice(content.as_bytes());
+fn write_file(path: String, content: String, bom: bool, encoding: Option<String>) -> Result<Option<u64>, String> {
+    let data = encode_text(&content, encoding.as_deref().unwrap_or("utf-8"), bom)?;
     fs::write(&path, data).map_err(|e| format!("{path}: {e}"))?;
     Ok(mtime_ms(Path::new(&path)))
 }
@@ -282,6 +320,19 @@ mod tests {
     }
 
     #[test]
+    fn encodes_text_in_the_chosen_encoding() {
+        assert_eq!(encode_text("æøå", "utf-8", true).unwrap(), b"\xEF\xBB\xBF\xC3\xA6\xC3\xB8\xC3\xA5");
+        assert_eq!(encode_text("æøå€", "windows-1252", false).unwrap(), b"\xE6\xF8\xE5\x80");
+        assert_eq!(encode_text("æ", "iso-8859-1", false).unwrap(), b"\xE6");
+        assert_eq!(encode_text("Aæ", "utf-16le", true).unwrap(), b"\xFF\xFE\x41\x00\xE6\x00");
+        assert_eq!(encode_text("A", "utf-16be", true).unwrap(), b"\xFE\xFF\x00\x41");
+        assert_eq!(encode_text("日本", "shift_jis", false).unwrap(), b"\x93\xFA\x96\x7B");
+        let err = encode_text("a 日 b", "windows-1252", false).unwrap_err();
+        assert!(err.contains('日'), "{err}");
+        assert!(encode_text("x", "no-such-encoding", false).is_err());
+    }
+
+    #[test]
     fn pwsh_reports_missing_module_or_formats() {
         if Command::new("pwsh").arg("-v").output().is_err() {
             return; // pwsh not installed here
@@ -320,6 +371,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &PredefinedMenuItem::separator(app)?,
             &item("save", "Save", Some("CmdOrCtrl+S"))?,
             &item("save_as", "Save As…", Some("CmdOrCtrl+Shift+S"))?,
+            &item("encoding", "Encoding…", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("close_tab", "Close Tab", Some("CmdOrCtrl+W"))?,
         ],

@@ -13,6 +13,10 @@ export interface Tab {
   content: string;
   eol: Eol;
   bom: boolean;
+  /** WHATWG encoding name ("utf-8", "windows-1252", "utf-16le"…); used for reading and saving. */
+  encoding: string;
+  /** The file had bytes that aren't valid in `encoding` (shown as �); saving asks first. */
+  lossy?: boolean;
   dirty: boolean;
   /** On-disk modification time when the file was last loaded or saved. */
   mtime: number | null;

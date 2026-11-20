@@ -13,9 +13,15 @@ import type {
 
 export interface FileData {
   content: string;
-  /** The file started with a UTF-8 byte order mark; written back on save. */
+  /** The file started with a byte order mark; written back on save. */
   bom: boolean;
   mtime: number | null;
+  /** WHATWG encoding name the text was decoded with. */
+  encoding: string;
+  /** Some bytes weren't valid in that encoding and were replaced with U+FFFD. */
+  lossy: boolean;
+  /** Not valid UTF-8 and no BOM: opened as Windows-1252 instead. */
+  fallback: boolean;
 }
 
 /** Files above this size are refused: the editor keeps the whole text in memory. */
@@ -31,39 +37,75 @@ export const formatSize = (n: number) =>
       ? `${(n / 1024 / 1024).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1)} MB`
       : `${Math.max(1, Math.round(n / 1024))} KB`;
 
-/**
- * Reads a text file in chunks (raw bytes, decoded as UTF-8 with invalid bytes replaced).
- * `onProgress` returns false to cancel (then this resolves to null).
- */
-async function readText(path: string, onProgress?: (loaded: number, total: number) => boolean): Promise<FileData | null> {
-  const stat = await invoke<{ size: number; mtime: number | null }>("file_stat", { path });
-  if (stat.size > MAX_FILE_BYTES) {
-    throw new Error(`the file is ${formatSize(stat.size)}; Notepad opens files up to ${formatSize(MAX_FILE_BYTES)}`);
-  }
-  const decoder = new TextDecoder("utf-8"); // drops a leading BOM by itself
+/** Decodes the whole file with one decoder. With `fatal`, invalid bytes throw (TypeError). */
+async function decodeFile(
+  path: string,
+  size: number,
+  encoding: string,
+  fatal: boolean,
+  onProgress?: (loaded: number, total: number) => boolean,
+): Promise<string | null> {
+  const decoder = new TextDecoder(encoding, { fatal }); // drops a leading BOM of this encoding by itself
   const parts: string[] = [];
-  let bom = false;
   let offset = 0;
   for (;;) {
     const buf = new Uint8Array(await invoke<ArrayBuffer>("read_file_range", { path, offset, len: CHUNK }));
-    if (offset === 0) bom = buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
     parts.push(decoder.decode(buf, { stream: true }));
     offset += buf.length;
-    if (onProgress && !onProgress(offset, Math.max(stat.size, offset))) return null;
+    if (onProgress && !onProgress(offset, Math.max(size, offset))) return null;
     // A short read is the end (a growing log file just gets read up to where it is now).
     if (buf.length < CHUNK || offset > MAX_FILE_BYTES) break;
   }
   parts.push(decoder.decode());
-  return { content: parts.join(""), bom, mtime: stat.mtime };
+  return parts.join("");
 }
 
+/**
+ * Reads a text file in chunks (raw bytes, no JSON). `onProgress` returns false to cancel (resolves to null).
+ * `encoding` null = detect: a BOM decides, otherwise UTF-8, or Windows-1252 if the bytes aren't valid UTF-8.
+ * A chosen encoding is used as is; bytes that aren't valid in it become U+FFFD (`lossy`).
+ */
+async function readText(
+  path: string,
+  onProgress?: (loaded: number, total: number) => boolean,
+  encoding: string | null = null,
+): Promise<FileData | null> {
+  const stat = await invoke<{ size: number; mtime: number | null }>("file_stat", { path });
+  if (stat.size > MAX_FILE_BYTES) {
+    throw new Error(`the file is ${formatSize(stat.size)}; Notepad opens files up to ${formatSize(MAX_FILE_BYTES)}`);
+  }
+  const head = new Uint8Array(await invoke<ArrayBuffer>("read_file_range", { path, offset: 0, len: 3 }));
+  const sniffed =
+    head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf
+      ? "utf-8"
+      : head[0] === 0xff && head[1] === 0xfe
+        ? "utf-16le"
+        : head[0] === 0xfe && head[1] === 0xff
+          ? "utf-16be"
+          : null;
+  const enc = encoding ?? sniffed ?? "utf-8";
+  const base = { mtime: stat.mtime, bom: sniffed !== null && sniffed === enc, encoding: enc, lossy: false, fallback: false };
+  try {
+    const content = await decodeFile(path, stat.size, enc, true, onProgress);
+    return content === null ? null : { ...base, content };
+  } catch (e) {
+    if (!(e instanceof TypeError)) throw e;
+  }
+  // Invalid bytes. Detecting: a file without BOM that isn't UTF-8 is most likely Windows-1252 (every byte is valid).
+  if (encoding === null && sniffed === null) {
+    const content = await decodeFile(path, stat.size, "windows-1252", false, onProgress);
+    return content === null ? null : { ...base, content, encoding: "windows-1252", fallback: true };
+  }
+  const content = await decodeFile(path, stat.size, enc, false, onProgress);
+  return content === null ? null : { ...base, content, lossy: true };
+}
 
 export const backend = {
-  readFile: async (path: string) => (await readText(path))!,
+  readFile: async (path: string, encoding: string | null = null) => (await readText(path, undefined, encoding))!,
   readText,
   fileSize: async (path: string) => (await invoke<{ size: number }>("file_stat", { path })).size,
-  writeFile: (path: string, content: string, bom: boolean) =>
-    invoke<number | null>("write_file", { path, content, bom }),
+  writeFile: (path: string, content: string, bom: boolean, encoding: string) =>
+    invoke<number | null>("write_file", { path, content, bom, encoding }),
   fileMtime: (path: string) => invoke<number | null>("file_mtime", { path }),
   loadState: (name: "session" | "settings") => invoke<string | null>("load_state", { name }),
   saveState: (name: "session" | "settings", json: string) => invoke<void>("save_state", { name, json }),

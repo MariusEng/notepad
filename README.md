@@ -22,6 +22,12 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **CSV and log files** colour each column, so values that belong together share a colour on every line.
   CSV detects the delimiter (`,` `;` tab `|`) and bolds the header; logs detect their leading columns
   (timestamp, level, [thread], logger…) and tint error and warning lines.
+- **Column (block) selection**: Option+drag / Alt+drag with the mouse; ⇧⌥⌘+arrows (macOS) or Shift+Alt+arrows
+  (Windows/Linux, also Ctrl+Shift+Alt+arrows) with the keyboard. Typing, deleting, copy and paste then work on every line.
+- **Encodings**: UTF-8 by default. A BOM is recognised (UTF-8, UTF-16 LE/BE); a file that isn't valid UTF-8 opens as
+  Windows-1252. **File → Encoding…** (also the tab menu, or the status bar) reopens or saves in another encoding:
+  Western, Central European, Cyrillic, Greek, Turkish, Baltic, Hebrew, Arabic, Thai, Vietnamese, Japanese, Chinese,
+  Korean, UTF-16. Characters an encoding can't hold are refused on save, never silently replaced.
 - **Big files** (over 4 MB) stream in with a progress bar in the tab, so the app never freezes; up to 512 MB.
   Big Markdown files (over 1 MB) open in the source view.
 - **Format Document** (⇧⌥F / Shift+Alt+F): JavaScript, HTML, JSON, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
@@ -68,6 +74,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 | Format Document | ⇧⌥F | Shift+Alt+F |
 | Toggle source (Markdown, HTML) | ⌘/ | Ctrl+/ |
 | Show/hide repository sidebar | ⇧⌘E | Ctrl+Shift+E |
+| Column selection (mouse) | Option+drag | Alt+drag |
+| Column selection (keyboard) | ⇧⌥⌘+arrows | Shift+Alt+arrows, Ctrl+Shift+Alt+arrows |
+| Add cursor above/below | ⌥⌘↑ / ⌥⌘↓ | Ctrl+Alt+↑ / ↓ |
 
 ⌘Tab is not used because macOS reserves it for switching apps, and the app never receives it.
 
@@ -101,6 +110,8 @@ src/
     HtmlPreview.tsx     sandboxed HTML preview
     languages/          language registry, batch mode, formatters, CSV/log column colouring (columns.ts)
   help.md               Help → Notepad Help (opens in a tab)
+  editors/blockSelect.ts   column selection (mouse + keyboard)
+  editors/encodings.ts     encodings offered in File → Encoding
   About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters

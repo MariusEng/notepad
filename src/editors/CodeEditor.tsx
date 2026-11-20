@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
 import {
   EditorView,
-  crosshairCursor,
   drawSelection,
   dropCursor,
   highlightActiveLine,
@@ -10,7 +9,6 @@ import {
   highlightSpecialChars,
   keymap,
   lineNumbers,
-  rectangularSelection,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { bracketMatching, foldKeymap, indentOnInput, indentUnit } from "@codemirror/language";
@@ -18,6 +16,7 @@ import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from
 import { LANGUAGES } from "./languages";
 import { cmHighlight, cmTheme } from "./cmTheme";
 import { registerEditor } from "./handle";
+import { columnSelection } from "./blockSelect";
 import { useTabs, type Tab } from "../tabs/store";
 
 /** Uncontrolled: it reads the tab once on mount. The parent remounts it (via `key`)
@@ -65,8 +64,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         EditorState.allowMultipleSelections.of(true),
         indentOnInput(),
         bracketMatching(),
-        rectangularSelection(),
-        crosshairCursor(),
+        columnSelection(),
         highlightActiveLine(),
         highlightSelectionMatches(),
         search({ top: true }),

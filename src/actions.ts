@@ -1,6 +1,7 @@
-import { message, open, save } from "@tauri-apps/plugin-dialog";
+import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import helpText from "./help.md?raw";
-import { LARGE_FILE_BYTES, backend } from "./lib/backend";
+import { LARGE_FILE_BYTES, backend, type FileData } from "./lib/backend";
+import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
 import { LANGUAGES, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
 import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
@@ -14,6 +15,7 @@ function baseTab(partial: Partial<Tab> & Pick<Tab, "title" | "language">): Tab {
     content: "",
     eol: "\n",
     bom: false,
+    encoding: "utf-8",
     dirty: false,
     mtime: null,
     mdSource: false,
@@ -22,6 +24,22 @@ function baseTab(partial: Partial<Tab> & Pick<Tab, "title" | "language">): Tab {
     version: 0,
     ...partial,
   };
+}
+
+/** The tab fields that come from a file read from disk. */
+export function fromFile(file: FileData) {
+  const { content, eol } = splitEol(file.content);
+  return { content, eol, bom: file.bom, mtime: file.mtime, encoding: file.encoding, lossy: file.lossy || undefined };
+}
+
+/** What to read a tab's file with: its encoding, or detection for plain UTF-8 (the file may have changed). */
+export const readEncodingOf = (t: Pick<Tab, "encoding">) => (t.encoding === "utf-8" ? null : t.encoding);
+
+function reportEncoding(file: FileData, name: string) {
+  if (file.fallback)
+    store().notify(`${name} isn't valid UTF-8, so it was opened as ${encodingName(file.encoding, false)}. Change it under File → Encoding.`);
+  else if (file.lossy)
+    store().notify(`Some bytes in ${name} aren't valid ${encodingName(file.encoding)} and show as �. Try another encoding (File → Encoding).`, "error");
 }
 
 export function splitEol(text: string): { content: string; eol: Eol } {
@@ -77,18 +95,11 @@ export async function openFiles(paths?: string[]) {
         continue;
       }
       const file = await backend.readFile(path);
-      const { content, eol } = splitEol(file.content);
-      const tab = baseTab({
-        path,
-        title: fileName(path),
-        language: detectLanguage(path, content),
-        content,
-        eol,
-        bom: file.bom,
-        mtime: file.mtime,
-      });
-      if (tab.language === "markdown" && content.length > MD_FORMATTED_MAX) tab.mdSource = true;
+      const fields = fromFile(file);
+      const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path, fields.content), ...fields });
+      if (tab.language === "markdown" && fields.content.length > MD_FORMATTED_MAX) tab.mdSource = true;
       store().addTab(tab, { replaceId });
+      reportEncoding(file, tab.title);
     } catch (e) {
       store().notify(`Could not open ${fileName(path)}: ${e}`, "error");
     }
@@ -102,21 +113,24 @@ const MD_FORMATTED_MAX = 1024 * 1024;
  * Reads a file into an existing tab in chunks, showing progress in the tab (`loading`). Used for big files
  * when opening, restoring the session and reloading. Stops if the tab is closed meanwhile.
  */
-export async function loadFileInto(id: string, path: string) {
+export async function loadFileInto(id: string, path: string, encoding: string | null = null) {
   const alive = () => store().tabs.some((t) => t.id === id && t.path === path);
   try {
-    const file = await backend.readText(path, (loaded, total) => {
-      if (!alive()) return false;
-      store().update(id, { loading: { loaded, total } });
-      return true;
-    });
+    const file = await backend.readText(
+      path,
+      (loaded, total) => {
+        if (!alive()) return false;
+        store().update(id, { loading: { loaded, total } });
+        return true;
+      },
+      encoding,
+    );
     if (!file || !alive()) return;
-    const { content, eol } = splitEol(file.content);
+    const { content, ...fields } = fromFile(file);
     const language = detectLanguage(path, content.slice(0, 20000));
+    reportEncoding(file, fileName(path));
     store().replaceContent(id, content, {
-      eol,
-      bom: file.bom,
-      mtime: file.mtime,
+      ...fields,
       dirty: false,
       external: undefined,
       loading: undefined,
@@ -140,10 +154,17 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
   if (!tab || tab.loading) return false;
   if (!tab.path) return saveTabAs(tab.id);
   try {
-    const mtime = await backend.writeFile(tab.path, toDisk(tab), tab.bom);
+    if (tab.lossy) {
+      const ok = await ask(
+        `${tab.title} had bytes that aren't valid ${encodingName(tab.encoding)}; they show as � and will be saved that way. Save anyway?`,
+        { title: "Save with replaced characters?", kind: "warning", okLabel: "Save", cancelLabel: "Cancel" },
+      );
+      if (!ok) return false;
+    }
+    const mtime = await backend.writeFile(tab.path, toDisk(tab), tab.bom, tab.encoding);
     // Only clear dirty if nothing was typed while the write was in flight.
     const now = store().tabs.find((t) => t.id === tab.id);
-    store().update(tab.id, { mtime, external: undefined, dirty: now?.content !== tab.content });
+    store().update(tab.id, { mtime, external: undefined, lossy: undefined, dirty: now?.content !== tab.content });
     // Files inside the open git repository are committed and pushed (see git/actions.ts).
     void import("./git/actions").then((g) => g.afterSave(tab.path!));
     return true;
@@ -211,12 +232,12 @@ export async function reloadTab(id: string) {
   if (!tab?.path) return;
   if ((await backend.fileSize(tab.path).catch(() => 0)) > LARGE_FILE_BYTES) {
     store().update(id, { loading: { loaded: 0, total: 1 } });
-    return loadFileInto(id, tab.path);
+    return loadFileInto(id, tab.path, readEncodingOf(tab));
   }
   try {
-    const file = await backend.readFile(tab.path);
-    const { content, eol } = splitEol(file.content);
-    store().replaceContent(id, content, { eol, bom: file.bom, mtime: file.mtime, dirty: false, external: undefined });
+    const file = await backend.readFile(tab.path, readEncodingOf(tab));
+    const { content, ...fields } = fromFile(file);
+    store().replaceContent(id, content, { ...fields, dirty: false, external: undefined });
   } catch (e) {
     store().notify(`Could not reload ${tab.title}: ${e}`, "error");
   }
@@ -271,4 +292,83 @@ export function openHelp() {
   const open = store().tabs.find((t) => t.path === null && t.title === title);
   if (open) return store().setActive(open.id);
   store().addTab(baseTab({ title, language: "markdown", content: helpText }));
+}
+
+// ---------------------------------------------------------------- encodings
+
+/** Reads the file again with another encoding (unsaved edits are discarded, after asking). */
+export async function reopenWithEncoding(id: string, encoding: string) {
+  flushEdits();
+  const tab = store().tabs.find((t) => t.id === id);
+  if (!tab?.path || tab.loading) return;
+  if (tab.dirty) {
+    const ok = await ask(`Reopening ${tab.title} as ${encodingName(encoding)} discards your unsaved changes.`, {
+      title: "Reopen with encoding",
+      kind: "warning",
+      okLabel: "Reopen",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+  }
+  store().update(id, { loading: { loaded: 0, total: 1 } });
+  await loadFileInto(id, tab.path, encoding);
+}
+
+/** Saves the file in another encoding (an untitled tab keeps it for when it is saved). */
+export async function saveWithEncoding(id: string, encoding: string) {
+  flushEdits();
+  const tab = store().tabs.find((t) => t.id === id);
+  if (!tab || tab.loading) return;
+  const before = { encoding: tab.encoding, bom: tab.bom, dirty: tab.dirty };
+  store().update(id, { encoding, bom: bomFor(encoding, tab.bom), dirty: true });
+  if (!tab.path) return;
+  // If it can't be saved in that encoding (characters it doesn't have), keep the old one.
+  if (!(await saveTab(id))) store().update(id, before);
+}
+
+export function toggleBom(id: string) {
+  const tab = store().tabs.find((t) => t.id === id);
+  if (tab && tab.encoding === "utf-8") store().update(id, { bom: !tab.bom, dirty: true });
+}
+
+/** File → Encoding, the tab menu and the status bar: reopen or save with an encoding. */
+export function encodingMenuItems(tab: Tab) {
+  return [
+    {
+      id: "enc-reopen",
+      text: "Reopen with Encoding",
+      enabled: !!tab.path,
+      items: ENCODINGS.map((e) => ({
+        id: `enc-reopen-${e.id}`,
+        text: e.label,
+        checked: e.id === tab.encoding,
+        action: () => void reopenWithEncoding(tab.id, e.id),
+      })),
+    },
+    {
+      id: "enc-save",
+      text: "Save with Encoding",
+      items: ENCODINGS.map((e) => ({
+        id: `enc-save-${e.id}`,
+        text: e.label,
+        checked: e.id === tab.encoding,
+        action: () => void saveWithEncoding(tab.id, e.id),
+      })),
+    },
+    {
+      id: "enc-bom",
+      text: "UTF-8 with BOM",
+      checked: tab.encoding === "utf-8" && tab.bom,
+      enabled: tab.encoding === "utf-8",
+      action: () => toggleBom(tab.id),
+    },
+  ];
+}
+
+export async function showEncodingMenu(id = store().activeId) {
+  const tab = store().tabs.find((t) => t.id === id);
+  if (!tab) return;
+  const { Menu } = await import("@tauri-apps/api/menu");
+  const menu = await Menu.new({ items: encodingMenuItems(tab) });
+  await menu.popup();
 }

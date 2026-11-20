@@ -595,6 +595,7 @@ body.resizing {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.sb-warn,
 .sb-git.error,
 .sb-git.conflict,
 .sb-git.auth {

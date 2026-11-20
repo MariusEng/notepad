@@ -1,5 +1,5 @@
 import { LARGE_FILE_BYTES, backend } from "../lib/backend";
-import { loadFileInto, splitEol } from "../actions";
+import { fromFile, loadFileInto, readEncodingOf } from "../actions";
 import { flushEdits } from "../editors/handle";
 import { LANGUAGES, type LanguageId } from "../editors/languages";
 import { pairUp, useTabs, type Eol, type Tab } from "../tabs/store";
@@ -20,6 +20,7 @@ interface SessionTab {
   language: LanguageId;
   eol: Eol;
   bom: boolean;
+  encoding?: string;
   dirty: boolean;
   mtime: number | null;
   mdSource: boolean;
@@ -70,6 +71,7 @@ async function writeSession() {
       language: t.language,
       eol: t.eol,
       bom: t.bom,
+      encoding: t.encoding,
       dirty: t.dirty,
       mtime: t.mtime,
       mdSource: t.mdSource,
@@ -101,7 +103,7 @@ function scheduleSave() {
 
 /** Restores the previous session's tabs. Returns false if there was nothing to restore. */
 /** Big clean files from the restored session, loaded once the window is up. */
-const bigFiles: [string, string][] = [];
+const bigFiles: [string, string, string | null][] = [];
 
 export async function restoreSession(): Promise<boolean> {
   let session: Session | null = null;
@@ -117,6 +119,7 @@ export async function restoreSession(): Promise<boolean> {
     const base: Tab = {
       ...s,
       language: s.language in LANGUAGES ? s.language : "plaintext",
+      encoding: s.encoding ?? "utf-8",
       content: "",
       version: 0,
       external: undefined,
@@ -137,13 +140,12 @@ export async function restoreSession(): Promise<boolean> {
         // Clean file tab: always load the current version from disk. Big files stream in after startup.
         if ((await backend.fileSize(s.path)) > LARGE_FILE_BYTES) {
           base.loading = { loaded: 0, total: 1 };
-          bigFiles.push([s.id, s.path]);
+          bigFiles.push([s.id, s.path, readEncodingOf(base)]);
           tabs.push(base);
           continue;
         }
-        const file = await backend.readFile(s.path);
-        const { content, eol } = splitEol(file.content);
-        Object.assign(base, { content, eol, bom: file.bom, mtime: file.mtime, dirty: false });
+        const file = await backend.readFile(s.path, readEncodingOf(base));
+        Object.assign(base, fromFile(file), { dirty: false });
       }
       // (Untitled, unbuffered tabs are empty; they restore as-is.)
       tabs.push(base);
@@ -172,7 +174,7 @@ export async function restoreSession(): Promise<boolean> {
 
 /** Streams in the big files of the restored session (call once the window is showing). */
 export function loadRestoredBigFiles() {
-  for (const [id, path] of bigFiles.splice(0)) void loadFileInto(id, path);
+  for (const [id, path, encoding] of bigFiles.splice(0)) void loadFileInto(id, path, encoding);
 }
 
 /** Start autosaving the session whenever tabs change. Call after restoreSession(). */
@@ -209,13 +211,13 @@ export async function checkExternalChanges() {
         if ((await backend.fileSize(t.path)) > LARGE_FILE_BYTES) {
           // e.g. a growing log file: stream the new version in, with progress.
           update(t.id, { loading: { loaded: 0, total: 1 } });
-          void loadFileInto(t.id, t.path);
+          void loadFileInto(t.id, t.path, readEncodingOf(t));
           continue;
         }
-        const file = await backend.readFile(t.path);
-        const { content, eol } = splitEol(file.content);
+        const file = await backend.readFile(t.path, readEncodingOf(t));
+        const { content, ...fields } = fromFile(file);
         if (content === t.content) update(t.id, { mtime: file.mtime, external: undefined });
-        else replaceContent(t.id, content, { eol, bom: file.bom, mtime: file.mtime, external: undefined });
+        else replaceContent(t.id, content, { ...fields, external: undefined });
       } catch {
         /* unreadable right now; try again next time */
       }

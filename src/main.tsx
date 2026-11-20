@@ -8,7 +8,17 @@ import { App } from "./App";
 import { initTheme } from "./theme/theme";
 import { loadSettings, useSettings } from "./settings";
 import { installKeymap } from "./keymap";
-import { closeTab, formatActive, newTab, openFiles, openHelp, saveTab, saveTabAs, toggleSource } from "./actions";
+import {
+  closeTab,
+  formatActive,
+  newTab,
+  openFiles,
+  openHelp,
+  saveTab,
+  saveTabAs,
+  showEncodingMenu,
+  toggleSource,
+} from "./actions";
 import { openAbout } from "./About";
 import { openTypePicker } from "./TypePicker";
 import {
@@ -58,6 +68,7 @@ const MENU: Record<string, () => unknown> = {
   switch_branch: () => showBranchMenu(),
   new_branch: () => openDialog({ kind: "newBranch" }),
   help: openHelp,
+  encoding: () => showEncodingMenu(),
   about: openAbout,
   toggle_sidebar: toggleSidebar,
   toggle_autocommit: toggleAutoCommit,
