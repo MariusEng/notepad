@@ -95,6 +95,8 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
     // Only clear dirty if nothing was typed while the write was in flight.
     const now = store().tabs.find((t) => t.id === tab.id);
     store().update(tab.id, { mtime, external: undefined, dirty: now?.content !== tab.content });
+    // Files inside the open git repository are committed and pushed (see git/actions.ts).
+    void import("./git/actions").then((g) => g.afterSave(tab.path!));
     return true;
   } catch (e) {
     store().notify(`Save failed: ${e}`, "error");

@@ -13,6 +13,14 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
+mod creds;
+mod git_cmds;
+mod gitops;
+mod oauth;
+mod provider;
+#[cfg(test)]
+mod git_tests;
+
 /// Files the OS asked us to open before the frontend was ready to receive them.
 #[derive(Default)]
 struct PendingOpen(Mutex<Vec<String>>);
@@ -294,6 +302,13 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("new_of_type", "New File of Type…", Some("CmdOrCtrl+Shift+N"))?,
             &item("open", "Open…", Some("CmdOrCtrl+O"))?,
             &PredefinedMenuItem::separator(app)?,
+            &item("open_repo", "Open Repository…", Some("CmdOrCtrl+Shift+O"))?,
+            &item("clone_repo", "Clone Repository…", None)?,
+            &item("new_repo", "New Private Repository…", None)?,
+            &item("sync_repo", "Sync Repository", None)?,
+            &item("git_accounts", "Git Accounts…", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::separator(app)?,
             &item("save", "Save", Some("CmdOrCtrl+S"))?,
             &item("save_as", "Save As…", Some("CmdOrCtrl+Shift+S"))?,
             &PredefinedMenuItem::separator(app)?,
@@ -344,6 +359,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("toggle_source", "Toggle Markdown Source", Some("CmdOrCtrl+/"))?,
             &item("toggle_format_bar", "Show/Hide Formatting Bar", None)?,
             &item("close_split", "Close Split View", None)?,
+            &item("toggle_sidebar", "Show/Hide Repository Sidebar", Some("CmdOrCtrl+Shift+E"))?,
+            &item("toggle_autocommit", "Auto Commit & Push on Save (On/Off)", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("next_tab", "Next Tab        Ctrl+Tab", None)?,
             &item("prev_tab", "Previous Tab    Ctrl+Shift+Tab", None)?,
@@ -445,7 +462,22 @@ pub fn run() {
             prune_buffers,
             take_pending_open,
             quit_app,
-            format_external
+            format_external,
+            git_cmds::git_open,
+            git_cmds::git_info,
+            git_cmds::git_list_dir,
+            git_cmds::git_commit_file,
+            git_cmds::git_sync,
+            git_cmds::git_clone,
+            git_cmds::git_create_repo,
+            git_cmds::cred_save_pat,
+            git_cmds::cred_delete,
+            git_cmds::cred_exists,
+            git_cmds::open_external,
+            git_cmds::oauth_redirect_uri,
+            git_cmds::oauth_device_start,
+            git_cmds::oauth_device_poll,
+            git_cmds::oauth_login
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

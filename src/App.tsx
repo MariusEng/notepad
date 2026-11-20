@@ -5,6 +5,8 @@ import { StatusBar } from "./StatusBar";
 import { Banner } from "./Banner";
 import { TypePicker } from "./TypePicker";
 import { FormatBar } from "./FormatBar";
+import { Sidebar } from "./git/Sidebar";
+import { GitDialogs } from "./git/Dialogs";
 import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
 import { editorFor } from "./editors/handle";
@@ -28,19 +30,23 @@ export function App() {
     <div className="app">
       <TabBar />
       <FormatBar />
-      <main className="editor-area">
-        <div
-          className="panes"
-          ref={panes}
-          style={{ gridTemplateColumns: splitId ? `${ratio}fr 1px ${1 - ratio}fr` : "1fr" }}
-        >
-          {mainId && <Pane key="main" id={mainId} split={!!splitId} />}
-          {mainId && splitId && <Divider container={panes} />}
-          {splitId && <Pane key="split" id={splitId} split />}
-        </div>
-      </main>
+      <div className="workspace">
+        <Sidebar />
+        <main className="editor-area">
+          <div
+            className="panes"
+            ref={panes}
+            style={{ gridTemplateColumns: splitId ? `${ratio}fr 1px ${1 - ratio}fr` : "1fr" }}
+          >
+            {mainId && <Pane key="main" id={mainId} split={!!splitId} />}
+            {mainId && splitId && <Divider container={panes} />}
+            {splitId && <Pane key="split" id={splitId} split />}
+          </div>
+        </main>
+      </div>
       <StatusBar />
       <TypePicker />
+      <GitDialogs />
       {notice && (
         <div className={`toast ${notice.kind}`} role="status">
           {notice.text}

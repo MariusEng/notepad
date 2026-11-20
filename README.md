@@ -28,6 +28,15 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **Split view**: right-click a tab → **Open to the Right** to see two files side by side
   (drag the divider to resize, double-click it to reset; **Close Split View** in the tab menu or View menu).
   The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
+- **Git repositories** (File → Open Repository…, ⇧⌘O): open any folder inside an existing repository and edit
+  its files from a quiet sidebar (⇧⌘E to hide/show). **Saving commits and pushes** the file ("Update notes.md");
+  if the remote moved on, the changes are merged first. A conflicting change is never applied: your commits stay
+  local and the status bar shows a warning. The status bar shows the branch and sync state; click it to sync now.
+  File → **New Private Repository…** creates a private repository on GitHub, GitLab, Forgejo/Gitea, Bitbucket or
+  Azure DevOps and clones it; **Clone Repository…** downloads an existing one; **Git Accounts…** manages sign-ins
+  (access token, or OAuth with your own OAuth app: device code for GitHub/GitLab, browser sign-in for the others).
+  Credentials are looked up in the app's own account store (OS keychain), then in your git credential manager.
+  Only HTTPS remotes are supported. View → *Auto Commit & Push on Save* turns the automatic commit off.
 - **Tabs**: drag to reorder, middle-click to close, right-click for more, including **File Type**
   to change the type of a tab (an untitled file also gets the new extension).
 - **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.
@@ -82,6 +91,11 @@ src/
     languages/          language registry, batch mode, formatters
   theme/                design tokens (light/dark) and OS theme following
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
+src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone
+src-tauri/src/creds.rs  credentials: keychain, then the git credential helper; token refresh
+src-tauri/src/oauth.rs  device flow and browser (PKCE) sign-in
+src-tauri/src/provider.rs  provider endpoints and "create private repository" APIs
+src-tauri/src/git_cmds.rs  Tauri commands for the above (git_tests.rs holds the tests)
 ```
 
 Session data is stored in the OS app-data folder

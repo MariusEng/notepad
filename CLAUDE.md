@@ -45,6 +45,19 @@ the features, shortcuts and file layout.
   Editors register per tab id in `editors/handle.ts` (`activeEditor()` = the focused one); only the
   focused pane's editor autofocuses or reports to the status bar. The session saves mainId/splitId.
 
+- Git (0.4.0): all Rust, no `git` binary. `gitops.rs` (libgit2; HTTPS only), `creds.rs` (app keychain via the
+  `keyring` crate, then git2's credential-helper support = Git Credential Manager/osxkeychain), `oauth.rs`
+  (device flow + PKCE loopback on 127.0.0.1:51789; the user registers their own OAuth app, no client id is built in),
+  `provider.rs` (GitHub, GitLab, Forgejo/Gitea, Bitbucket, Azure DevOps), `git_cmds.rs` (Tauri commands; these
+  modules have no Tauri dependency apart from the wrappers). Errors starting with `AUTH_REQUIRED:<host>` mean
+  "ask for credentials". Frontend in `src/git/` (store, actions, Sidebar, Dialogs); the save path calls
+  `git/actions.afterSave`. Saving auto-commits ONLY the saved file (in-memory index, other staged files untouched).
+  Sync = fetch, fast-forward or in-memory merge (conflicts are never applied; local commits stay), push.
+  Jobs run one at a time (queue). Settings keep accounts (no secrets), sidebar, autoCommit and repoRoot.
+  `cargo test` (src-tauri) runs `git_tests.rs`: libgit2 against a local bare repo, plus providers/OAuth against a
+  mock HTTP server. NOT verified against real providers: OAuth for Forgejo/Bitbucket/Azure, Azure Bearer-header git
+  auth, Bitbucket app-password flows, and helper lookups on macOS/Windows.
+
 ## Gotchas found so far
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
@@ -66,8 +79,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-20, version 0.3.0)
-Latest (0.3.0): split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
+## Status (2026-11-20, version 0.4.0)
+Latest (0.4.0): git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
 Done and pushed: scaffold, tabs, CodeMirror with all languages (custom batch mode), Milkdown

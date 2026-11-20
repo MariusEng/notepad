@@ -447,3 +447,221 @@ body.resizing {
   color: var(--muted);
   background: var(--bg-subtle);
 }
+
+/* ---------- repository sidebar, git dialogs ---------- */
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.workspace > .editor-area {
+  min-width: 0;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 220px;
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border);
+  font-size: 13px;
+}
+.sb-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 8px 6px 12px;
+  color: var(--fg);
+}
+.sb-repo {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-branch {
+  flex: 1;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sb-x {
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+.sb-x:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.sb-tree {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.sb-node {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-right: 8px;
+  color: var(--muted);
+  cursor: default;
+  white-space: nowrap;
+}
+.sb-node:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.sb-node.active {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.sb-caret {
+  flex: none;
+  width: 14px;
+  color: var(--faint);
+  font-size: 10px;
+}
+.sb-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-git.error,
+.sb-git.conflict,
+.sb-git.auth {
+  color: var(--danger);
+}
+
+.dialog {
+  width: min(460px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 16px 18px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.dialog h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.dialog .note,
+.dialog .field-hint {
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.dialog .error {
+  margin: 6px 0;
+  color: var(--danger);
+  font-size: 12.5px;
+}
+.dialog code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  user-select: all;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 8px 0;
+}
+.field-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.dialog input:not([type="checkbox"]),
+.dialog select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+.dialog input:focus,
+.dialog select:focus {
+  border-color: var(--accent);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.seg {
+  display: flex;
+  gap: 2px;
+  margin: 10px 0 4px;
+  padding: 2px;
+  background: var(--bg-sunken);
+  border-radius: 7px;
+}
+.seg button {
+  flex: 1;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+}
+.seg button.on {
+  background: var(--bg);
+  color: var(--fg);
+}
+.acct-list {
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+}
+.acct-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.device-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 10px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius);
+}
+.device-code strong {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+}
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.btn:disabled {
+  opacity: 0.5;
+}

@@ -10,6 +10,15 @@ import { loadSettings, useSettings } from "./settings";
 import { installKeymap } from "./keymap";
 import { closeTab, formatActive, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource } from "./actions";
 import { openTypePicker } from "./TypePicker";
+import {
+  openDialog,
+  openRepoFolder,
+  restoreRepo,
+  syncNow,
+  syncOnFocus,
+  toggleAutoCommit,
+  toggleSidebar,
+} from "./git/actions";
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
@@ -33,6 +42,13 @@ const MENU: Record<string, () => unknown> = {
   quit,
   find: () => activeEditor()?.find(),
   format: formatActive,
+  open_repo: openRepoFolder,
+  new_repo: () => openDialog({ kind: "newRepo" }),
+  clone_repo: () => openDialog({ kind: "clone" }),
+  git_accounts: () => openDialog({ kind: "accounts" }),
+  sync_repo: () => syncNow(),
+  toggle_sidebar: toggleSidebar,
+  toggle_autocommit: toggleAutoCommit,
   close_split: () => useTabs.getState().closeSplit(),
   toggle_source: () => toggleMarkdownSource(),
   next_tab: () => useTabs.getState().cycle(1),
@@ -57,6 +73,7 @@ async function start() {
 
   await restoreSession();
   startSessionAutosave();
+  void restoreRepo();
 
   const win = getCurrentWindow();
   // Closing the window quits the app; save the session first (the handler is awaited).
@@ -65,7 +82,10 @@ async function start() {
   });
   // Pick up edits made by other programs when you come back to the app.
   win.onFocusChanged(({ payload: focused }) => {
-    if (focused) checkExternalChanges();
+    if (focused) {
+      checkExternalChanges();
+      syncOnFocus();
+    }
   });
 
   const pending = await backend.takePendingOpen();
