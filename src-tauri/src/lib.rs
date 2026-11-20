@@ -407,6 +407,21 @@ pub fn run() {
         )
         .manage(PendingOpen(Mutex::new(cli_files)))
         .menu(|app| build_menu(app))
+        .setup(|app| {
+            // Safety net: the frontend shows the window after its first render. If that
+            // never happens (a startup error), show it anyway rather than run invisibly.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                if let Some(w) = handle.get_webview_window("main") {
+                    if !w.is_visible().unwrap_or(true) {
+                        let _ = w.show();
+                        let _ = w.set_focus();
+                    }
+                }
+            });
+            Ok(())
+        })
         .on_window_event(|_window, event| {
             // The frontend already saved in its close handler; the webview is gone, so
             // the exit hook below must not wait for it.

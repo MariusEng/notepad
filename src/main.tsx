@@ -70,8 +70,14 @@ async function start() {
   if (useTabs.getState().tabs.length === 0) newTab();
 
   createRoot(document.getElementById("root")!).render(<App />);
-  // The window starts hidden (tauri.conf.json) so it never shows unthemed content.
-  requestAnimationFrame(() => win.show());
 }
 
-start();
+// The window starts hidden (tauri.conf.json) so it never shows unthemed content.
+// Show it directly once started (not via requestAnimationFrame: WebKit doesn't run
+// animation frames for hidden windows), and also if startup fails part-way.
+start()
+  .catch((e) => console.error("startup failed", e))
+  .finally(() => {
+    getCurrentWindow().show().catch(() => {});
+    getCurrentWindow().setFocus().catch(() => {});
+  });
