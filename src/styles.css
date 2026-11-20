@@ -35,20 +35,26 @@ select {
 }
 
 /* ---------- tab bar ---------- */
+/* Minimal: soft pills on the editor background, no dividers. */
 
 .tabbar {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   flex: none;
-  height: 38px;
-  background: var(--bg-sunken);
+  height: 40px;
+  padding: 0 6px;
+  gap: 4px;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 
 .tabs {
   display: flex;
+  align-items: center;
+  gap: 2px;
   flex: 1;
   min-width: 0;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -58,48 +64,30 @@ select {
 }
 
 .tab {
-  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex: 0 1 auto;
-  min-width: 96px;
-  max-width: 220px;
-  padding: 0 6px 0 14px;
-  color: var(--muted);
-  border-right: 1px solid var(--border);
+  min-width: 84px;
+  max-width: 200px;
+  height: 28px;
+  padding: 0 4px 0 12px;
+  border-radius: 7px;
+  color: var(--faint);
   cursor: default;
   white-space: nowrap;
+  transition: background-color 120ms, color 120ms;
 }
 .tab:hover {
+  color: var(--muted);
+  background: var(--bg-subtle);
+}
+.tab.active {
   background: var(--bg-hover);
   color: var(--fg);
 }
-.tab.active {
-  background: var(--bg);
-  color: var(--fg);
-}
-.tab.active::after {
-  /* Merges the active tab into the editor below it. */
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 1px;
-  background: var(--bg);
-}
-.tab.active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 2px;
-  background: var(--accent);
-}
 .tab.dragging {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .tab-title {
@@ -154,7 +142,7 @@ select {
   visibility: visible;
 }
 .tab-close:hover {
-  background: var(--bg-hover);
+  background: var(--border);
   color: var(--fg);
 }
 
@@ -162,10 +150,12 @@ select {
   display: grid;
   place-items: center;
   flex: none;
-  width: 38px;
+  width: 28px;
+  height: 28px;
   border: 0;
+  border-radius: 7px;
   background: transparent;
-  color: var(--muted);
+  color: var(--faint);
 }
 .tab-new svg {
   width: 16px;
@@ -249,23 +239,14 @@ select {
   align-items: center;
   flex: none;
   gap: 2px;
-  height: 26px;
-  padding: 0 6px;
-  background: var(--bg-sunken);
-  border-top: 1px solid var(--border);
-  color: var(--muted);
+  height: 24px;
+  padding: 0 8px;
+  background: var(--bg);
+  color: var(--faint);
   font-size: 12px;
   white-space: nowrap;
 }
 
-.sb-path {
-  min-width: 0;
-  padding: 0 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  direction: rtl; /* elide the start of long paths, keep the file name */
-  text-align: left;
-}
 .sb-spacer {
   flex: 1;
 }
@@ -300,16 +281,9 @@ select {
 }
 
 @media (max-width: 640px) {
-  .sb-path,
-  .sb-hide-narrow {
-    display: none;
-  }
-  .sb-spacer {
-    flex: 1;
-  }
   .tab {
-    min-width: 80px;
-    max-width: 150px;
+    min-width: 72px;
+    max-width: 140px;
     padding-left: 10px;
   }
 }

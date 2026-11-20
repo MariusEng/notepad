@@ -1,0 +1,85 @@
+/* Crepe (Milkdown) mapped onto the app's theme tokens, so it follows light/dark. */
+:root .milkdown {
+  --crepe-color-background: var(--bg);
+  --crepe-color-on-background: var(--fg);
+  --crepe-color-surface: var(--bg-subtle);
+  --crepe-color-surface-low: var(--bg-sunken);
+  --crepe-color-on-surface: var(--fg);
+  --crepe-color-on-surface-variant: var(--muted);
+  --crepe-color-outline: var(--faint);
+  --crepe-color-primary: var(--accent);
+  --crepe-color-secondary: var(--bg-hover);
+  --crepe-color-on-secondary: var(--fg);
+  --crepe-color-inverse: var(--fg);
+  --crepe-color-on-inverse: var(--bg);
+  --crepe-color-inline-code: var(--syn-keyword);
+  --crepe-color-error: var(--danger);
+  --crepe-color-hover: var(--bg-hover);
+  --crepe-color-selected: var(--selection);
+  --crepe-color-inline-area: var(--bg-sunken);
+
+  --crepe-base-font-size: 16px;
+  --crepe-font-title: var(--font-ui);
+  --crepe-font-default: var(--font-ui);
+  --crepe-font-code: var(--font-mono);
+  --crepe-shadow-1: var(--shadow);
+  --crepe-shadow-2: var(--shadow);
+}
+
+.md-scroller {
+  height: 100%;
+  overflow-y: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.md-editor {
+  min-height: 100%;
+}
+
+.md-editor .milkdown {
+  background: var(--bg);
+  min-height: 100%;
+}
+
+/* A comfortable reading column, centred, that shrinks on narrow windows. */
+.md-editor .milkdown .ProseMirror {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 72px 30vh;
+  line-height: 1.65;
+  outline: none;
+}
+
+.md-editor .milkdown .ProseMirror ::selection {
+  background: var(--selection);
+}
+
+/* Optional formatting bar: flat and quiet. */
+.md-editor .milkdown .milkdown-top-bar {
+  background: color-mix(in srgb, var(--bg), transparent 8%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 8px;
+}
+.md-editor .milkdown .milkdown-top-bar .top-bar-inner {
+  max-width: 760px;
+  justify-content: center;
+}
+.md-editor .milkdown .milkdown-top-bar .top-bar-divider {
+  margin: 8px 4px;
+  height: 18px;
+}
+
+@media (max-width: 640px) {
+  .md-editor .milkdown .ProseMirror {
+    padding: 20px 18px 30vh;
+  }
+  /* The drag handle needs gutter space we don't have on narrow windows. */
+  .md-editor .milkdown .milkdown-block-handle {
+    display: none;
+  }
+}

@@ -12,7 +12,6 @@ import { closeTab, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource }
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
-import type { ThemePref } from "./theme/theme";
 
 initTheme(); // from the localStorage cache, before first render
 
@@ -34,12 +33,11 @@ const MENU: Record<string, () => unknown> = {
   theme_system: () => useSettings.getState().setTheme("system"),
   theme_light: () => useSettings.getState().setTheme("light"),
   theme_dark: () => useSettings.getState().setTheme("dark"),
+  toggle_format_bar: () => useSettings.getState().toggleFormatBar(),
 };
 
 async function start() {
-  const settings = await loadSettings();
-  if (settings.theme) useSettings.getState().setTheme(settings.theme as ThemePref);
-  else useSettings.setState({ theme: "system" });
+  await loadSettings();
 
   installKeymap();
   listen<string>("menu", (e) => MENU[e.payload]?.());

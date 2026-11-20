@@ -13,7 +13,7 @@ import {
   rectangularSelection,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
-import { bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit } from "@codemirror/language";
+import { bracketMatching, foldKeymap, indentOnInput, indentUnit } from "@codemirror/language";
 import { highlightSelectionMatches, openSearchPanel, search, searchKeymap } from "@codemirror/search";
 import { LANGUAGES } from "./languages";
 import { cmHighlight, cmTheme } from "./cmTheme";
@@ -45,7 +45,6 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         highlightActiveLineGutter(),
         highlightSpecialChars(),
         history(),
-        foldGutter(),
         drawSelection(),
         dropCursor(),
         EditorState.allowMultipleSelections.of(true),
