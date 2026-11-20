@@ -142,6 +142,9 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
+- **TODO (user request): delete files in a git repository**: e.g. right-click a file in the repo sidebar → Delete,
+  with a confirmation; commit the deletion and push (`gitops::commit_file` already writes "Delete <file>" when the
+  file is gone), and close or mark its open tab.
 - Code signing and notarisation for macOS; Windows/Linux builds (e.g. Forgejo Actions).
 - Single-instance handling (opening a file while the app is running in another instance).
 - Relative image paths in Markdown (needs Tauri's asset protocol).
