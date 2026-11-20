@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Notepad",
+  "version": "0.1.0",
+  "identifier": "no.1011.notepad",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Notepad",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 360,
+        "minHeight": 300,
+        "visible": false,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Notepad with WYSIWYG Markdown and syntax highlighting",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      { "ext": ["md", "markdown"], "name": "Markdown", "role": "Editor", "mimeType": "text/markdown" },
+      { "ext": ["txt", "text"], "name": "Plain Text", "role": "Editor", "mimeType": "text/plain" },
+      { "ext": ["ps1", "psm1", "psd1"], "name": "PowerShell Script", "role": "Editor" },
+      { "ext": ["pl", "pm"], "name": "Perl Script", "role": "Editor" },
+      { "ext": ["sh", "bash", "zsh"], "name": "Shell Script", "role": "Editor" },
+      { "ext": ["cmd", "bat"], "name": "Batch File", "role": "Editor" },
+      { "ext": ["ini", "cfg", "conf"], "name": "INI File", "role": "Editor" },
+      { "ext": ["yaml", "yml"], "name": "YAML", "role": "Editor" },
+      { "ext": ["json"], "name": "JSON", "role": "Editor", "mimeType": "application/json" }
+    ]
+  }
+}

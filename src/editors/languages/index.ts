@@ -1,0 +1,116 @@
+import type { Extension } from "@codemirror/state";
+import { StreamLanguage } from "@codemirror/language";
+
+export type LanguageId =
+  | "markdown"
+  | "plaintext"
+  | "powershell"
+  | "perl"
+  | "shell"
+  | "batch"
+  | "ini"
+  | "yaml"
+  | "json";
+
+export interface LanguageInfo {
+  id: LanguageId;
+  label: string;
+  /** Extensions (lower case, no dot); the first is used for Save As. */
+  extensions: string[];
+  /** Soft-wrap long lines (prose) instead of scrolling horizontally (code). */
+  wrap: boolean;
+  load: () => Promise<Extension>;
+}
+
+const legacy = async <T>(p: Promise<T>, pick: (m: T) => any) => StreamLanguage.define(pick(await p));
+
+export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
+  markdown: {
+    id: "markdown",
+    label: "Markdown",
+    extensions: ["md", "markdown", "mdown", "mkd"],
+    wrap: true,
+    load: async () => (await import("@codemirror/lang-markdown")).markdown(),
+  },
+  plaintext: {
+    id: "plaintext",
+    label: "Plain Text",
+    extensions: ["txt", "text", "log"],
+    wrap: true,
+    load: async () => [],
+  },
+  powershell: {
+    id: "powershell",
+    label: "PowerShell",
+    extensions: ["ps1", "psm1", "psd1"],
+    wrap: false,
+    load: () => legacy(import("@codemirror/legacy-modes/mode/powershell"), (m) => m.powerShell),
+  },
+  perl: {
+    id: "perl",
+    label: "Perl",
+    extensions: ["pl", "pm", "t"],
+    wrap: false,
+    load: () => legacy(import("@codemirror/legacy-modes/mode/perl"), (m) => m.perl),
+  },
+  shell: {
+    id: "shell",
+    label: "Shell",
+    extensions: ["sh", "bash", "zsh", "ksh"],
+    wrap: false,
+    load: () => legacy(import("@codemirror/legacy-modes/mode/shell"), (m) => m.shell),
+  },
+  batch: {
+    id: "batch",
+    label: "Batch (cmd/bat)",
+    extensions: ["bat", "cmd"],
+    wrap: false,
+    load: () => legacy(import("./batch"), (m) => m.batch),
+  },
+  ini: {
+    id: "ini",
+    label: "INI",
+    extensions: ["ini", "cfg", "conf", "properties", "env"],
+    wrap: false,
+    load: () => legacy(import("@codemirror/legacy-modes/mode/properties"), (m) => m.properties),
+  },
+  yaml: {
+    id: "yaml",
+    label: "YAML",
+    extensions: ["yaml", "yml"],
+    wrap: false,
+    load: async () => (await import("@codemirror/lang-yaml")).yaml(),
+  },
+  json: {
+    id: "json",
+    label: "JSON",
+    extensions: ["json", "jsonc", "json5"],
+    wrap: false,
+    load: async () => (await import("@codemirror/lang-json")).json(),
+  },
+};
+
+export const LANGUAGE_LIST = Object.values(LANGUAGES);
+
+export function fileName(path: string): string {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+/** Picks a language from the file extension, then from a shebang line. */
+export function detectLanguage(path: string, content = ""): LanguageId {
+  const name = fileName(path).toLowerCase();
+  const dot = name.lastIndexOf(".");
+  if (dot > 0) {
+    const ext = name.slice(dot + 1);
+    for (const lang of LANGUAGE_LIST) if (lang.extensions.includes(ext)) return lang.id;
+  }
+  if (name === ".env" || name.startsWith(".env.")) return "ini";
+  if (name === ".bashrc" || name === ".zshrc" || name === ".profile" || name === ".bash_profile") return "shell";
+  const first = content.slice(0, 200).split("\n", 1)[0];
+  if (first.startsWith("#!")) {
+    if (/\b(ba|z|k|da)?sh\b/.test(first)) return "shell";
+    if (/\bperl\b/.test(first)) return "perl";
+    if (/\bpwsh\b|powershell/i.test(first)) return "powershell";
+  }
+  return "plaintext";
+}

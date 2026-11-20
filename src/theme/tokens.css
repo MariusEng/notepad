@@ -1,0 +1,74 @@
+/* Design tokens. Every component and both editors read these, so switching
+   data-theme on <html> re-themes the whole app instantly. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --bg-sunken: #eef0f3;
+  --bg-hover: #e8ebef;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --faint: #8c959f;
+  --border: #d8dee4;
+  --accent: #0969da;
+  --accent-fg: #ffffff;
+  --selection: #b6d7ff;
+  --active-line: rgba(9, 105, 218, 0.05);
+  --match: rgba(250, 200, 0, 0.35);
+  --warning-bg: #fff8c5;
+  --warning-fg: #4d2d00;
+  --danger: #cf222e;
+  --shadow: 0 1px 3px rgba(31, 35, 40, 0.12), 0 8px 24px rgba(66, 74, 83, 0.12);
+
+  --syn-keyword: #cf222e;
+  --syn-string: #0a3069;
+  --syn-comment: #6e7781;
+  --syn-number: #0550ae;
+  --syn-variable: #953800;
+  --syn-function: #8250df;
+  --syn-type: #116329;
+  --syn-property: #0550ae;
+  --syn-operator: #cf222e;
+  --syn-meta: #6639ba;
+  --syn-heading: #0550ae;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1e1f22;
+  --bg-subtle: #26282c;
+  --bg-sunken: #18191b;
+  --bg-hover: #303338;
+  --fg: #e6e6e6;
+  --muted: #a0a8b3;
+  --faint: #6f7782;
+  --border: #393c42;
+  --accent: #4f9dff;
+  --accent-fg: #0b1220;
+  --selection: #264f78;
+  --active-line: rgba(255, 255, 255, 0.04);
+  --match: rgba(255, 210, 0, 0.25);
+  --warning-bg: #3b2e05;
+  --warning-fg: #f2d77a;
+  --danger: #ff7b72;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --syn-keyword: #ff7b72;
+  --syn-string: #a5d6ff;
+  --syn-comment: #8b949e;
+  --syn-number: #79c0ff;
+  --syn-variable: #ffa657;
+  --syn-function: #d2a8ff;
+  --syn-type: #7ee787;
+  --syn-property: #79c0ff;
+  --syn-operator: #ff7b72;
+  --syn-meta: #d2a8ff;
+  --syn-heading: #79c0ff;
+}
+
+:root {
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --radius: 6px;
+}
