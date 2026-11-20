@@ -93,6 +93,24 @@ with seeded session files); formatters tested in Node; Rust unit tests pass.
 Not yet verified by eye: overall look, Ctrl+Tab in WKWebView, Crepe dark-mode details,
 narrow-window layout. The user is reviewing the UI.
 
+Unpushed: commits 1421305, 52abf60, 596f30c, 1c28c2c, aafeabe, 519f3ae (file type, 0.2-0.5.1). Push from the
+user's terminal over HTTPS (the cloud sandbox can't reach git.1011.no).
+
+Not compiled or run on the Mac yet: the Tauri wiring in `lib.rs` for the git commands/menu (the git modules
+themselves compile and pass 12 tests in a Linux sandbox with a stub `tauri` crate). First step next session:
+`cd src-tauri && cargo test`, `npm run typecheck`, `npm run tauri dev`. The first Rust build is slow (libgit2 +
+vendored OpenSSL).
+
+Untested against real servers: browser sign-in on git.1011.no (Forgejo built-in client id
+a4792ccc-144e-407e-86c9-5e7d8d9c3269, redirect http://127.0.0.1:51789), GitHub device flow with the GitHub CLI
+client id 178c6fc778ccc68e1d6a, Bitbucket, Azure DevOps (Bearer auth for git), credential-helper lookups on
+macOS/Windows. No in-app conflict resolution (conflicts are never applied).
+
+Open decision: GitLab, Azure DevOps and Bitbucket have no shared client id, so they need a token or the user's
+own OAuth app. To make them one-click, register a "Notepad" OAuth app on each (public client, redirect
+http://127.0.0.1:51789, GitLab scope api) and put the ids in `BUILTIN_OAUTH` (src/git/types.ts). Bitbucket needs
+a secret, so it stays token-based.
+
 ## Possible next steps
 - Fix whatever the user reports from using the app.
 - Code signing and notarisation for macOS; Windows/Linux builds (e.g. Forgejo Actions).
