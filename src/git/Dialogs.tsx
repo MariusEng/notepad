@@ -6,6 +6,7 @@ import { closeDialog, openDialog, openRepo } from "./actions";
 import { useGit } from "./store";
 import {
   PROVIDERS,
+  builtinClient,
   guessProvider,
   hostOf,
   type Account,
@@ -105,7 +106,11 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
   const [provider, setProvider] = useState<ProviderKind>(initialHost ? guessProvider(initialHost) : "github");
   const info = PROVIDERS[provider];
   const [baseUrl, setBaseUrl] = useState(initialHost ? `https://${initialHost}` : info.baseUrl);
-  const [method, setMethod] = useState<"pat" | "oauth">("pat");
+  const builtin = builtinClient(provider, hostOf(baseUrl));
+  // Browser sign-in is the default whenever it needs nothing from the user.
+  const [chosen, setChosen] = useState<"pat" | "oauth" | null>(null);
+  const method = chosen ?? (builtin ? "oauth" : "pat");
+  const setMethod = setChosen;
   const [username, setUsername] = useState("");
   const [token, setToken] = useState("");
   const [clientId, setClientId] = useState("");
@@ -137,7 +142,7 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
   const cfg = (): ProviderCfg => ({
     kind: provider,
     baseUrl: baseUrl.trim(),
-    clientId: clientId.trim(),
+    clientId: clientId.trim() || builtin?.clientId || "",
     clientSecret: clientSecret.trim() || undefined,
   });
 
@@ -226,15 +231,37 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
         </>
       ) : (
         <>
-          <p className="note">
-            {info.oauthHelp} Redirect URI: <code>{redirect}</code>
-          </p>
-          <Field label="Client id">
-            <input value={clientId} onChange={(e) => setClientId(e.target.value)} spellCheck={false} />
-          </Field>
-          <Field label={info.secretRequired ? "Client secret" : "Client secret (only if your app has one)"}>
-            <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} spellCheck={false} />
-          </Field>
+          {builtin ? (
+            <>
+              <p className="note">
+                Your browser opens so you can sign in and allow access. {info.label} may show the app as “{builtin.name}”.
+              </p>
+              <details className="advanced">
+                <summary>Use my own OAuth app instead</summary>
+                <p className="note">
+                  {info.oauthHelp} Redirect URI: <code>{redirect}</code>
+                </p>
+                <Field label="Client id">
+                  <input value={clientId} onChange={(e) => setClientId(e.target.value)} spellCheck={false} />
+                </Field>
+                <Field label="Client secret (only if your app has one)">
+                  <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} spellCheck={false} />
+                </Field>
+              </details>
+            </>
+          ) : (
+            <>
+              <p className="note">
+                {info.oauthHelp} Redirect URI: <code>{redirect}</code>
+              </p>
+              <Field label="Client id">
+                <input value={clientId} onChange={(e) => setClientId(e.target.value)} spellCheck={false} />
+              </Field>
+              <Field label={info.secretRequired ? "Client secret" : "Client secret (only if your app has one)"}>
+                <input type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} spellCheck={false} />
+              </Field>
+            </>
+          )}
           {info.deviceFlow && (
             <label className="check">
               <input type="checkbox" checked={useDevice} onChange={(e) => setUseDevice(e.target.checked)} /> Use a device code (no redirect needed)

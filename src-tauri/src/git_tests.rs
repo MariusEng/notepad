@@ -355,6 +355,7 @@ mod api {
             *a2.lock().unwrap() = url.to_string();
             let u = url::Url::parse(url).unwrap();
             let q: std::collections::HashMap<_, _> = u.query_pairs().into_owned().collect();
+            assert_eq!(q["redirect_uri"], oauth::redirect_uri());
             let back = format!("{}?code=thecode&state={}", q["redirect_uri"], q["state"]);
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(200));

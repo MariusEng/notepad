@@ -665,3 +665,12 @@ body.resizing {
 .btn:disabled {
   opacity: 0.5;
 }
+
+.dialog details.advanced {
+  margin: 6px 0;
+  font-size: 13px;
+}
+.dialog details.advanced summary {
+  color: var(--muted);
+  cursor: default;
+}

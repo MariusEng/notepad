@@ -112,7 +112,7 @@ export const PROVIDERS: Record<ProviderKind, ProviderInfo> = {
     secretRequired: false,
     owner: { label: "Organisation (optional)", required: false },
     project: false,
-    oauthHelp: "Add an OAuth2 application (Settings → Applications), untick “Confidential client”, add the redirect URI shown below, and paste its client id.",
+    oauthHelp: "Only needed to use your own OAuth app: add an OAuth2 application (Settings → Applications), untick “Confidential client”, add the redirect URI shown below, and paste its client id.",
     patHelp: "Create a token with repository read/write permission (Settings → Applications).",
   },
   bitbucket: {
@@ -138,6 +138,32 @@ export const PROVIDERS: Record<ProviderKind, ProviderInfo> = {
     patHelp: "Create a personal access token with Code (read & write) scope. Any user name works.",
   },
 };
+
+/**
+ * OAuth client ids that work without the user registering anything. Client ids of public (PKCE / device flow)
+ * apps are not secret. Where there is none, the account dialog asks for the user's own OAuth app.
+ *  - Forgejo and Gitea pre-register apps for git credential helpers on every server, with the same ids
+ *    (https://forgejo.org/docs/latest/user/authentication/oauth2-provider/); this is "git-credential-oauth".
+ *  - For the others, register an OAuth app for Notepad once and paste its client id here:
+ *    GitHub (device flow enabled, host github.com), GitLab (public app, scope api, host gitlab.com, redirect
+ *    http://127.0.0.1:51789), Azure DevOps (Entra public client). Bitbucket needs a client secret, so it cannot
+ *    be shipped.
+ */
+export const BUILTIN_OAUTH: Record<ProviderKind, { clientId: string; hosts?: string[]; name: string } | null> = {
+  forgejo: { clientId: "a4792ccc-144e-407e-86c9-5e7d8d9c3269", name: "git-credential-oauth" },
+  github: { clientId: "", hosts: ["github.com"], name: "Notepad" },
+  gitlab: { clientId: "", hosts: ["gitlab.com"], name: "Notepad" },
+  azure: { clientId: "", name: "Notepad" },
+  bitbucket: null,
+};
+
+/** The built-in client id for this provider and server, or null if the user has to bring their own. */
+export function builtinClient(provider: ProviderKind, host: string): { clientId: string; name: string } | null {
+  const b = BUILTIN_OAUTH[provider];
+  if (!b || !b.clientId) return null;
+  if (b.hosts && !b.hosts.includes(host.toLowerCase())) return null;
+  return b;
+}
 
 /** Best guess at the provider for a git host name. */
 export function guessProvider(host: string): ProviderKind {

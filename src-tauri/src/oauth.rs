@@ -1,8 +1,9 @@
 //! OAuth sign-in. Two flows, both without a client secret where the provider allows it:
 //!   * device flow (GitHub, GitLab): the user types a short code on the provider's website;
 //!   * authorization code + PKCE through a loopback redirect (Forgejo/Gitea, Bitbucket, Azure DevOps, GitLab):
-//!     a browser opens, and the provider redirects to http://127.0.0.1:51789/callback.
-//! The user registers their own OAuth app with the provider and enters its client id in the app.
+//!     a browser opens, and the provider redirects to http://127.0.0.1:51789.
+//! The client id comes from the frontend: a built-in one where the provider has one that anybody may use
+//! (Forgejo/Gitea pre-register apps for git credential helpers), otherwise the user's own OAuth app.
 
 use crate::creds::{now_secs, Stored};
 use crate::provider::{fetch_username, post_form, ProviderCfg};
@@ -16,10 +17,11 @@ use std::time::{Duration, Instant};
 
 pub type Res<T> = Result<T, String>;
 
-/// The redirect address to register with the OAuth app.
+/// The redirect address (to register with your own OAuth app). It has no path on purpose: Forgejo and Gitea's
+/// built-in apps register exactly "http://127.0.0.1" and ignore the port.
 pub const REDIRECT_PORT: u16 = 51789;
 pub fn redirect_uri() -> String {
-    format!("http://127.0.0.1:{REDIRECT_PORT}/callback")
+    format!("http://127.0.0.1:{REDIRECT_PORT}")
 }
 
 fn b64url(bytes: &[u8]) -> String {
@@ -207,9 +209,12 @@ pub fn authcode(cfg: &ProviderCfg, open: impl FnOnce(&str)) -> Res<Stored> {
         let n = stream.read(&mut buf).unwrap_or(0);
         let head = String::from_utf8_lossy(&buf[..n]).to_string();
         let target = head.lines().next().and_then(|l| l.split_whitespace().nth(1)).unwrap_or("");
-        let Some(query) = target.strip_prefix("/callback?") else {
-            reply(&mut stream, false); // e.g. a favicon request: keep waiting
-            continue;
+        let query = match target.split_once('?') {
+            Some(("/" | "/callback", q)) => q,
+            _ => {
+                reply(&mut stream, false); // e.g. a favicon request: keep waiting
+                continue;
+            }
         };
         if let Some(e) = query_param(query, "error") {
             reply(&mut stream, false);

@@ -34,7 +34,7 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   local and the status bar shows a warning. The status bar shows the branch and sync state; click it to sync now.
   File → **New Private Repository…** creates a private repository on GitHub, GitLab, Forgejo/Gitea, Bitbucket or
   Azure DevOps and clones it; **Clone Repository…** downloads an existing one; **Git Accounts…** manages sign-ins
-  (access token, or OAuth with your own OAuth app: device code for GitHub/GitLab, browser sign-in for the others).
+  (access token, or **Sign in with browser**: one click on Forgejo/Gitea servers, which have a built-in OAuth app for git tools; other providers use an OAuth app you register: device code for GitHub/GitLab).
   Credentials are looked up in the app's own account store (OS keychain), then in your git credential manager.
   Only HTTPS remotes are supported. View → *Auto Commit & Push on Save* turns the automatic commit off.
 - **Tabs**: drag to reorder, middle-click to close, right-click for more, including **File Type**
