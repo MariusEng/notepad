@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
+use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 /// Files the OS asked us to open before the frontend was ready to receive them.
 #[derive(Default)]
@@ -96,6 +97,8 @@ fn load_state(app: AppHandle, name: String) -> Result<Option<String>, String> {
 /// Atomic write (temp + rename) so a crash mid-write never corrupts the session.
 #[tauri::command]
 fn save_state(app: AppHandle, name: String, json: String) -> Result<(), String> {
+    #[cfg(debug_assertions)]
+    eprintln!("[notepad] save_state {name} ({} bytes)", json.len());
     if name != "session" && name != "settings" {
         return Err("unknown state file".into());
     }
@@ -138,7 +141,10 @@ fn take_pending_open(state: State<PendingOpen>) -> Vec<String> {
 
 #[tauri::command]
 fn quit_app(app: AppHandle) {
+    #[cfg(debug_assertions)]
+    eprintln!("[notepad] quit_app");
     QUIT_CONFIRMED.store(true, Ordering::SeqCst);
+    let _ = app.save_window_state(window_state_flags());
     app.exit(0);
 }
 
@@ -329,6 +335,12 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     Menu::with_items(app, &[&file, &edit, &view, &window])
 }
 
+/// Restore size, position and maximised state, but not visibility: the window
+/// stays hidden until the frontend has painted (see main.tsx).
+fn window_state_flags() -> StateFlags {
+    StateFlags::all() & !StateFlags::VISIBLE
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Windows/Linux pass files to open as command-line arguments.
@@ -339,8 +351,20 @@ pub fn run() {
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(window_state_flags())
+                .build(),
+        )
         .manage(PendingOpen(Mutex::new(cli_files)))
         .menu(|app| build_menu(app))
+        .on_window_event(|_window, event| {
+            // The frontend already saved in its close handler; the webview is gone, so
+            // the exit hook below must not wait for it.
+            if let tauri::WindowEvent::Destroyed = event {
+                QUIT_CONFIRMED.store(true, Ordering::SeqCst);
+            }
+        })
         .on_menu_event(|app, event| {
             let _ = app.emit("menu", event.id().0.as_str());
         })
@@ -363,6 +387,11 @@ pub fn run() {
     app.run(|app, event| match event {
         // Quitting (Cmd+Q from the Dock, OS shutdown…) — let the frontend save first.
         RunEvent::ExitRequested { api, code, .. } => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "[notepad] exit requested code={code:?} confirmed={}",
+                QUIT_CONFIRMED.load(Ordering::SeqCst)
+            );
             if code.is_none() && !QUIT_CONFIRMED.load(Ordering::SeqCst) {
                 if app.get_webview_window("main").is_some() {
                     api.prevent_exit();

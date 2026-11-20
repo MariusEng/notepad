@@ -12,10 +12,13 @@ import { closeTab, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource }
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
+import { checkExternalChanges, restoreSession, saveSessionNow, startSessionAutosave } from "./session/session";
 
 initTheme(); // from the localStorage cache, before first render
 
+/** Hot exit: no "save changes?" prompts, everything is restored on next launch. */
 async function quit() {
+  await saveSessionNow();
   await backend.quit();
 }
 
@@ -48,13 +51,26 @@ async function start() {
     if (e.payload.type === "drop") openFiles(e.payload.paths);
   });
 
+  await restoreSession();
+  startSessionAutosave();
+
+  const win = getCurrentWindow();
+  // Closing the window quits the app; save the session first (the handler is awaited).
+  win.onCloseRequested(async () => {
+    await saveSessionNow();
+  });
+  // Pick up edits made by other programs when you come back to the app.
+  win.onFocusChanged(({ payload: focused }) => {
+    if (focused) checkExternalChanges();
+  });
+
   const pending = await backend.takePendingOpen();
   if (pending.length) await openFiles(pending);
   if (useTabs.getState().tabs.length === 0) newTab();
 
   createRoot(document.getElementById("root")!).render(<App />);
   // The window starts hidden (tauri.conf.json) so it never shows unthemed content.
-  requestAnimationFrame(() => getCurrentWindow().show());
+  requestAnimationFrame(() => win.show());
 }
 
 start();
