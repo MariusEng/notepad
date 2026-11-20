@@ -67,7 +67,10 @@ export const cmHighlight = syntaxHighlighting(
     { tag: [t.variableName, t.special(t.variableName)], color: "var(--syn-variable)" },
     { tag: [t.function(t.variableName), t.standard(t.variableName), t.labelName], color: "var(--syn-function)" },
     { tag: [t.typeName, t.className, t.namespace], color: "var(--syn-type)" },
-    { tag: [t.propertyName, t.attributeName, t.definition(t.propertyName)], color: "var(--syn-property)" },
+    {
+      tag: [t.propertyName, t.attributeName, t.definition(t.propertyName), t.definition(t.variableName)],
+      color: "var(--syn-property)",
+    },
     { tag: [t.operator, t.punctuation], color: "var(--syn-operator)" },
     { tag: [t.meta, t.processingInstruction], color: "var(--syn-meta)" },
     { tag: t.heading, color: "var(--syn-heading)", fontWeight: "700" },

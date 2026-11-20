@@ -185,7 +185,7 @@ fn format_external(tool: String, input: String, indent: u8) -> Result<String, St
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "Invoke-Formatter -ScriptDefinition ([Console]::In.ReadToEnd())",
+                "$PSStyle.OutputRendering = 'PlainText'; Invoke-Formatter -ScriptDefinition ([Console]::In.ReadToEnd())",
             ],
         ),
         _ => return Err(format!("unknown formatter: {tool}")),
@@ -225,7 +225,56 @@ fn format_external(tool: String, input: String, indent: u8) -> Result<String, St
         }
         Ok(s)
     } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        let err = strip_ansi(&String::from_utf8_lossy(&out.stderr));
+        if tool == "pwsh" && err.contains("Invoke-Formatter") && err.contains("not recognized") {
+            return Err("PowerShell formatting needs PSScriptAnalyzer. Run `Install-Module PSScriptAnalyzer` in pwsh.".into());
+        }
+        Err(err.lines().next().unwrap_or("formatter failed").trim().to_string())
+    }
+}
+
+/// Removes terminal colour codes (ESC [ … letter) from tool output.
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\u{1b}' && chars.peek() == Some(&'[') {
+            chars.next();
+            for c in chars.by_ref() {
+                if c.is_ascii_alphabetic() {
+                    break;
+                }
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_ansi_codes() {
+        assert_eq!(strip_ansi("\u{1b}[31;1mError:\u{1b}[0m bad"), "Error: bad");
+    }
+
+    #[test]
+    fn rejects_unknown_formatter() {
+        assert!(format_external("rm".into(), String::new(), 2).is_err());
+    }
+
+    #[test]
+    fn pwsh_reports_missing_module_or_formats() {
+        if Command::new("pwsh").arg("-v").output().is_err() {
+            return; // pwsh not installed here
+        }
+        match format_external("pwsh".into(), "function x{\nWrite-Host 'a'\n}\n".into(), 4) {
+            Ok(out) => assert!(out.contains("Write-Host")),
+            Err(e) => assert!(e.contains("PSScriptAnalyzer"), "unexpected error: {e}"),
+        }
     }
 }
 

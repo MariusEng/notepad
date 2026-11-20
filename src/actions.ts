@@ -178,3 +178,21 @@ export function toggleMarkdownSource(id = store().activeId) {
   const tab = store().tabs.find((t) => t.id === id);
   if (tab?.language === "markdown") store().update(tab.id, { mdSource: !tab.mdSource, scroll: 0 });
 }
+
+/** Format Document (⇧⌥F). In code editors it is a single undoable edit. */
+export async function formatActive() {
+  const tab = activeTab();
+  if (!tab) return;
+  const { formatText, FormatError } = await import("./editors/languages/format");
+  const { activeEditor } = await import("./editors/handle");
+  try {
+    const formatted = await formatText(tab.language, tab.content);
+    if (formatted === tab.content) {
+      store().notify("Already formatted");
+      return;
+    }
+    if (!activeEditor()?.replaceAll(formatted)) store().replaceContent(tab.id, formatted, { dirty: true });
+  } catch (e) {
+    store().notify(e instanceof FormatError ? e.message : `Format failed: ${e}`, "error");
+  }
+}

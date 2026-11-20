@@ -8,7 +8,7 @@ import { App } from "./App";
 import { initTheme } from "./theme/theme";
 import { loadSettings, useSettings } from "./settings";
 import { installKeymap } from "./keymap";
-import { closeTab, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource } from "./actions";
+import { closeTab, formatActive, newTab, openFiles, saveTab, saveTabAs, toggleMarkdownSource } from "./actions";
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
@@ -30,6 +30,7 @@ const MENU: Record<string, () => unknown> = {
   close_tab: () => closeTab(),
   quit,
   find: () => activeEditor()?.find(),
+  format: formatActive,
   toggle_source: () => toggleMarkdownSource(),
   next_tab: () => useTabs.getState().cycle(1),
   prev_tab: () => useTabs.getState().cycle(-1),
