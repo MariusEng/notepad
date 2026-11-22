@@ -133,6 +133,10 @@ cd src-tauri && cargo test
   its server); `scripts/release-mac.sh` republishes the whole set when the dmg is added by hand, because deling
   replaces a release as a whole. On the Mac the token is read from the keychain item `deling-api-token`
   (`security add-generic-password -s deling-api-token -a deling -w '<token>'`). No token = skipped, not failed.
+- **Faster builds**: the Mac runner jobs build into fixed folders (`~forgejo-runner/.cache/notepad-ci/`), so they
+  only recompile what changed. For the Linux runner, `ci/linux.Containerfile` is a prepared image (packages, Rust,
+  npm cache, compiled Rust dependencies); build and push it with `scripts/ci-image.sh` on a machine with podman or
+  docker, then the Linux job can use it.
 - **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
   `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
 - Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
@@ -165,6 +169,7 @@ src/
 scripts/forgejo-release.sh  attach files to the Forgejo release of a tag
 scripts/deling-publish.sh  publish a version on deling.1011.no/notepad (all files at once)
 scripts/release-mac.sh  build the macOS dmg, attach it to the release, republish everything on deling
+scripts/ci-image.sh     build + push the Linux CI image (ci/linux.Containerfile) to git.1011.no's registry
 scripts/ci-log.sh       read the build logs the workflow attaches to the draft release "CI logs"
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
 src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"

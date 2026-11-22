@@ -1,0 +1,6 @@
+# Only what ci/linux.Containerfile copies (scripts/ci-image.sh builds from the repository root).
+*
+!package.json
+!package-lock.json
+!src-tauri/Cargo.toml
+!src-tauri/Cargo.lock

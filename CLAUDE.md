@@ -147,6 +147,9 @@ the features, shortcuts and file layout.
   rewraps text values). Tree view = `editors/DataView.tsx`, `tab.dataView` (⌘/ for JSON/XML), XML via DOMParser.
   Gotcha: the Bash tool turns `\uXXXX` in commands into the character; write such escapes from parts.
 
+- Mac runner jobs (0.13.1): job-level CARGO_TARGET_DIR=/Users/forgejo-runner/.cache/notepad-ci/target-{macos,windows}
+  (a job's workdir is new every run, so src-tauri/target never persisted); bundles are copied from there.
+
 ## Gotchas found so far
 - Windows Credential Manager: max 2560 bytes per entry (keyring stores UTF-16 → 1280 units). creds.rs splits a
   longer secret (OAuth access + refresh token) into `host#1..N` entries with `parts:N` in the main entry; short
@@ -176,8 +179,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.13.0)
-Latest (0.13.0): XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
+## Status (2026-11-22, version 0.13.1)
+Latest (0.13.1): persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
+0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
 git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and
 Ctrl+N / Ctrl+Shift+N work. 0.12.5: Windows job moved to the Mac runner servai (cross-compile with Homebrew nsis/llvm/lld + cargo-xwin;
@@ -219,7 +223,10 @@ a secret, so it stays token-based.
   CodeMirror's lines still pin the original string (≈ 2× the file); keeping no store copy for mounted big docs would
   need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
   (their text is in buffers/), but `needsBuffer` must then not prune them.
-- Faster CI (user said hold off, 2026-11-22): prebuilt build images in git.1011.no's container registry (deps, Rust,
-  cargo-xwin, xwin SDK) + caching cargo registry/target; jobs take ~10–11 min now, about half of it setup.
+- Linux CI image (0.13.1, prepared, NOT YET IN USE): ci/linux.Containerfile (packages, rustup, npm cache, all Rust
+  deps compiled into CARGO_TARGET_DIR=/opt/notepad-target) + scripts/ci-image.sh (podman/docker build + push to
+  git.1011.no/marius/notepad-ci-linux:latest; .dockerignore keeps the context to 4 files). Once pushed, switch the
+  linux job to `container: image:` it (credentials if the package is private), drop its apt/rustup steps and copy
+  bundles from /opt/notepad-target/release/bundle.
 - Find inside the formatted Markdown view (currently ⌘F switches to source).
 - Recent files list.
