@@ -92,11 +92,24 @@ const MENU: Record<string, () => unknown> = {
   toggle_format_bar: () => useSettings.getState().toggleFormatBar(),
 };
 
+/** Commands whose shortcut may arrive twice on Windows: as a menu accelerator and through the page's key handler
+ *  (see keymap.ts). A repeat within 400 ms counts once. Other commands (e.g. Find Next held down) aren't limited. */
+const BOTH_PATHS = new Set(["new", "new_of_type"]);
+const lastRun = new Map<string, number>();
+function runMenu(id: string) {
+  if (BOTH_PATHS.has(id)) {
+    const now = Date.now();
+    if (now - (lastRun.get(id) ?? 0) < 400) return;
+    lastRun.set(id, now);
+  }
+  MENU[id]?.();
+}
+
 async function start() {
   await loadSettings();
 
-  installKeymap();
-  listen<string>("menu", (e) => MENU[e.payload]?.());
+  installKeymap(runMenu);
+  listen<string>("menu", (e) => runMenu(e.payload));
 
   // Files opened from Finder/Explorer, the command line, or dropped onto the window.
   listen("open-files", async () => openFiles(await backend.takePendingOpen()));

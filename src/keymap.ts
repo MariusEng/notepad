@@ -5,10 +5,14 @@ import { useTabs } from "./tabs/store";
  * Tab-switching shortcuts. Everything else (New, Open, Save, Close, Find, Format, Toggle Source)
  * is a native menu accelerator, see src-tauri/src/lib.rs.
  *
+ * Exception: on Windows/Linux, Ctrl+N and Ctrl+Shift+N are also handled here. WebView2 treats them as browser
+ * shortcuts (new window), so the menu accelerator may never fire. `runMenu` ignores a repeat of the same command
+ * within a moment, so a press that reaches both paths still opens one tab.
+ *
  * Note: Cmd+Tab (macOS) and Alt+Tab (Windows/Linux) belong to the OS app switcher
  * and never reach the app, so Ctrl+Tab is used on every platform.
  */
-export function installKeymap() {
+export function installKeymap(runMenu: (id: string) => void) {
   const handler = (e: KeyboardEvent) => {
     const { cycle, activateIndex } = useTabs.getState();
     const mod = isMac ? e.metaKey : e.ctrlKey;
@@ -22,6 +26,8 @@ export function installKeymap() {
       cycle(e.key === "ArrowRight" ? 1 : -1); // ⌘⌥→ / ⌘⌥←
     } else if (!isMac && e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === "PageDown" || e.key === "PageUp")) {
       cycle(e.key === "PageDown" ? 1 : -1); // Ctrl+PgDn / Ctrl+PgUp (Windows/Linux convention)
+    } else if (!isMac && e.ctrlKey && !e.altKey && !e.metaKey && e.code === "KeyN") {
+      runMenu(e.shiftKey ? "new_of_type" : "new"); // Ctrl+N / Ctrl+Shift+N
     } else if (mod && !e.shiftKey && !e.altKey && /^Digit[1-9]$/.test(e.code)) {
       const n = Number(e.code.slice(5));
       activateIndex(n === 9 ? -1 : n - 1); // ⌘1…⌘8 jump to tab, ⌘9 = last tab

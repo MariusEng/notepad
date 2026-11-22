@@ -589,6 +589,22 @@ pub fn run() {
         .manage(PendingOpen(Mutex::new(cli_files)))
         .menu(|app| build_menu(app))
         .setup(|app| {
+            // Windows: WebView2 keeps browser shortcuts for itself (Ctrl+N / Ctrl+Shift+N open a browser window, F5 and
+            // Ctrl+R reload the page and lose state, Ctrl+P prints), so Notepad's own shortcuts never fire. Turn them off.
+            #[cfg(windows)]
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.with_webview(|wv| unsafe {
+                    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2Settings3;
+                    use windows::core::Interface;
+                    if let Ok(core) = wv.controller().CoreWebView2() {
+                        if let Ok(settings) = core.Settings() {
+                            if let Ok(s3) = settings.cast::<ICoreWebView2Settings3>() {
+                                let _ = s3.SetAreBrowserAcceleratorKeysEnabled(false);
+                            }
+                        }
+                    }
+                });
+            }
             // Safety net: the frontend shows the window after its first render. If that
             // never happens (a startup error), show it anyway rather than run invisibly.
             let handle = app.handle().clone();

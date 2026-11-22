@@ -1,6 +1,6 @@
 [package]
 name = "notepad"
-version = "0.12.0"
+version = "0.12.1"
 description = "A modern notepad with WYSIWYG Markdown and syntax highlighting"
 edition = "2021"
 
@@ -34,6 +34,12 @@ tauri-plugin-single-instance = "2"
 # every unix: vendoring OpenSSL means no Homebrew/OpenSSL install is needed (adds a minute to the first build).
 [target.'cfg(unix)'.dependencies]
 git2 = { version = "0.20", default-features = false, features = ["https", "vendored-libgit2", "vendored-openssl"] }
+
+# Windows: turn off WebView2's own browser shortcuts (Ctrl+N new window, F5 reload…) so they reach Notepad.
+# Same versions as wry uses.
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.39"
+windows = "0.62"
 
 [dev-dependencies]
 tempfile = "3"

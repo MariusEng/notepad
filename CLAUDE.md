@@ -133,6 +133,11 @@ the features, shortcuts and file layout.
   The user chose NOT to code-sign or notarise macOS (no Apple Developer account); builds are ad-hoc/linker-signed.
 
 ## Gotchas found so far
+- Windows/WebView2 eats browser shortcuts (Ctrl+N/Ctrl+Shift+N = new window, F5/Ctrl+R reload, Ctrl+P) before the
+  native menu sees them. lib.rs setup turns them off (`SetAreBrowserAcceleratorKeysEnabled(false)` via
+  `with_webview`, webview2-com/windows crates, cfg(windows), only compiled in CI), and keymap.ts also handles
+  Ctrl+N / Ctrl+Shift+N in the page; `runMenu` (main.tsx) drops a repeat of those two within 400 ms. If another
+  Ctrl shortcut fails only on Windows, suspect the same thing.
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
   invisible. There is also a 3 s Rust fallback that shows it.
@@ -153,8 +158,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.12.0)
-Latest (0.12.0): automatic release on a green push to main; scripts/release-mac.sh. 0.11.3: build logs readable via scripts/ci-log.sh. 0.11.2: Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
+## Status (2026-11-22, version 0.12.1)
+Latest (0.12.1): Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
+Windows). 0.12.0 (first release on git.1011.no, all platforms): automatic release on a green push to main; scripts/release-mac.sh. 0.11.3: build logs readable via scripts/ci-log.sh. 0.11.2: Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
 launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
 image showing. 0.10.0: Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
 background tabs load lazily on launch, 4 MB read chunks. 0.9.0: folder browser in the sidebar (below the repository), right-click New File/New Folder in both trees,
@@ -191,5 +197,7 @@ a secret, so it stays token-based.
   CodeMirror's lines still pin the original string (≈ 2× the file); keeping no store copy for mounted big docs would
   need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
   (their text is in buffers/), but `needsBuffer` must then not prune them.
+- Faster CI (user said hold off, 2026-11-22): prebuilt build images in git.1011.no's container registry (deps, Rust,
+  cargo-xwin, xwin SDK) + caching cargo registry/target; jobs take ~10–11 min now, about half of it setup.
 - Find inside the formatted Markdown view (currently ⌘F switches to source).
 - Recent files list.
