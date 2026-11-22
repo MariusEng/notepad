@@ -37,9 +37,6 @@ python3 - "$work" <<'PY'
 import json, sys
 work = sys.argv[1]
 r = json.load(open(f"{work}/release.json"))
-with open(f"{work}/README.md", "w") as f:
-    f.write("# Notepad\n\nA minimal notepad for macOS, Windows and Linux. Markdown is the default: you edit formatted "
-            "text, and the file on disk stays plain `.md`.\n\n" + (r.get("body") or ""))
 with open(f"{work}/assets.txt", "w") as f:
     for a in r["assets"]:
         f.write(f"{a['name']}\t{a['browser_download_url']}\n")
@@ -48,4 +45,5 @@ mkdir -p "$work/files"
 while IFS=$'\t' read -r name dl; do
   curl -fsSL -H "Authorization: token $token" -o "$work/files/$name" "$dl"
 done <"$work/assets.txt"
+scripts/release-notes.sh deling "$tag" >"$work/README.md"
 scripts/deling-publish.sh "$tag" "$work/README.md" "$work"/files/*

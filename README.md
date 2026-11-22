@@ -119,6 +119,8 @@ cd src-tauri && cargo test
   only recompile what changed. For the Linux runner, `ci/linux.Containerfile` is a prepared image (packages, Rust,
   npm cache, compiled Rust dependencies); build and push it with `scripts/ci-image.sh` on a machine with podman or
   docker, then the Linux job can use it.
+- **Changelog**: `CHANGELOG.md` (add each version when bumping). The release notes are that version's section; the
+  deling page shows the whole list (`scripts/release-notes.sh`).
 - **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
   `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
 - No paid code signing. The macOS app is ad-hoc signed (`bundle.macOS.signingIdentity: "-"`; without it a

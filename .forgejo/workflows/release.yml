@@ -225,17 +225,19 @@ jobs:
               exit 0
             fi
           fi
-          prev=$(git tag -l 'v*' --sort=-v:refname | grep -vx "$tag" | head -1 || true)
+          # Release notes: this version's section of CHANGELOG.md (commit titles if it has none).
+          changes=$(scripts/release-notes.sh section "$tag")
+          if [ -z "$changes" ]; then
+            echo "::warning::CHANGELOG.md has no section for $tag; using the commit titles"
+            prev=$(git tag -l 'v*' --sort=-v:refname | grep -vx "$tag" | head -1 || true)
+            changes=$(git log --no-merges --pretty='- %s' ${prev:+$prev..}"${GITHUB_SHA}" | head -60)
+          fi
           {
             echo "## Changes"
             echo
-            git log --no-merges --pretty='- %s' ${prev:+$prev..}"${GITHUB_SHA}" | head -60
+            echo "$changes"
             echo
-            echo "## Downloads"
-            echo
-            echo "- **Windows**: \`Notepad_*_x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
-            echo "- **Linux**: \`.deb\` (Debian/Ubuntu), \`.rpm\` (Fedora/openSUSE) or \`.AppImage\` (any distribution)"
-            echo "- **macOS** (Apple Silicon): \`.dmg\`. Not notarised: the first time macOS says it can't check the app; click Done, then System Settings → Privacy & Security → **Open Anyway**."
+            echo "All versions: [CHANGELOG.md](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/src/branch/main/CHANGELOG.md)"
           } > /tmp/notes.md
           cat /tmp/notes.md
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -262,13 +264,8 @@ jobs:
           DELING_TOKEN: ${{ secrets.DELING_TOKEN }}
         run: |
           exec > >(tee -a /tmp/ci.log) 2>&1
-          {
-            echo "# Notepad"
-            echo
-            echo "A minimal notepad for macOS, Windows and Linux. Markdown is the default: you edit formatted text, and the file on disk stays plain \`.md\`."
-            echo
-            cat /tmp/notes.md
-          } > /tmp/deling-readme.md
+          # Intro, downloads and the whole changelog, so the page grows with every release.
+          scripts/release-notes.sh deling "${{ steps.decide.outputs.tag }}" > /tmp/deling-readme.md
           scripts/deling-publish.sh "${{ steps.decide.outputs.tag }}" /tmp/deling-readme.md dist-release/*/*
 
       - name: Upload build log

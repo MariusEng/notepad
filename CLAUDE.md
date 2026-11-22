@@ -45,6 +45,9 @@ the features, shortcuts and file layout.
   Keep these in sync: `package.json`, `package-lock.json` (top two entries),
   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (the `notepad` entry).
   Put the bump in the same commit as the change.
+- **Add the version to `CHANGELOG.md`** in the same commit (newest first, `## X.Y.Z — date`, user-facing main
+  changes; build-only patches can be skipped or one line). Releases use it: the Forgejo release notes are that
+  version's section and the deling.1011.no/notepad page shows the whole changelog (`scripts/release-notes.sh`).
 
 ## Architecture in brief
 - `src-tauri/src/lib.rs`: all Rust. File I/O (keeps BOM and permissions), `session.json` /
@@ -191,8 +194,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.14.0)
-Latest (0.14.0): preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
+## Status (2026-11-22, version 0.14.1)
+Latest (0.14.1): CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
