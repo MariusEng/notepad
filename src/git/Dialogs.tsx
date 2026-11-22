@@ -157,8 +157,15 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
     clientSecret: clientSecret.trim() || undefined,
   });
 
+  /** Self-hosted providers have no default server; ask for one before anything else. */
+  const serverMissing = () =>
+    info.editableUrl && !/^https?:\/\/[^/\s]+/i.test(baseUrl.trim())
+      ? "Enter the server address, for example https://git.example.com"
+      : "";
+
   const saveToken = async () => {
     setError("");
+    if (serverMissing()) return setError(serverMissing());
     if (!username.trim() || !token.trim()) return setError("Enter your user name and the token");
     try {
       const host = hostOf(baseUrl);
@@ -171,6 +178,7 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
 
   const signIn = async () => {
     setError("");
+    if (serverMissing()) return setError(serverMissing());
     cancelled.current = false;
     const c = cfg();
     const host = hostOf(baseUrl);
@@ -219,7 +227,12 @@ function AddAccount({ initialHost, onDone }: { initialHost?: string; onDone: () 
       </Field>
       {info.editableUrl && (
         <Field label="Server">
-          <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} spellCheck={false} />
+          <input
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="https://git.example.com"
+            spellCheck={false}
+          />
         </Field>
       )}
       <div className="seg">

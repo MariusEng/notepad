@@ -57,18 +57,85 @@ fn entry(host: &str) -> Result<keyring::Entry, String> {
     keyring::Entry::new(SERVICE, &host.to_lowercase()).map_err(|e| e.to_string())
 }
 
+/// Part `n` (1-based) of a secret that didn't fit in one entry.
+fn part_entry(host: &str, n: usize) -> Result<keyring::Entry, String> {
+    keyring::Entry::new(SERVICE, &format!("{}#{n}", host.to_lowercase())).map_err(|e| e.to_string())
+}
+
+/// Windows' Credential Manager holds at most 2560 bytes per entry and keyring stores UTF-16 there (1280 code
+/// units). OAuth sign-ins (access + refresh token, often JWTs) are longer, so longer secrets are split.
+const PART_UNITS: usize = 1000;
+const PARTS_PREFIX: &str = "parts:";
+
+/// Splits a secret into pieces of at most PART_UNITS UTF-16 code units, never inside a character.
+/// A secret that fits stays in one piece (that is also how everything was stored before splitting existed).
+fn split_secret(s: &str) -> Vec<String> {
+    let mut parts = vec![String::new()];
+    let mut units = 0;
+    for c in s.chars() {
+        let n = c.len_utf16();
+        if units + n > PART_UNITS {
+            parts.push(String::new());
+            units = 0;
+        }
+        parts.last_mut().unwrap().push(c);
+        units += n;
+    }
+    parts
+}
+
+/// How many parts the main entry's value says there are (None: the value is the secret itself).
+fn parts_count(main: &str) -> Option<usize> {
+    main.strip_prefix(PARTS_PREFIX)?.parse().ok()
+}
+
+fn delete_parts(host: &str, count: usize) {
+    for n in 1..=count {
+        if let Ok(e) = part_entry(host, n) {
+            let _ = e.delete_credential();
+        }
+    }
+}
+
 pub fn save(host: &str, stored: &Stored) -> Result<(), String> {
     let json = serde_json::to_string(stored).map_err(|e| e.to_string())?;
-    entry(host)?.set_password(&json).map_err(|e| format!("Could not save to the system keychain: {e}"))
+    let err = |e: keyring::Error| format!("Could not save to the system keychain: {e}");
+    let main = entry(host)?;
+    // Parts of an earlier, longer secret would be left behind.
+    if let Some(old) = main.get_password().ok().as_deref().and_then(parts_count) {
+        delete_parts(host, old);
+    }
+    let parts = split_secret(&json);
+    if parts.len() == 1 {
+        return main.set_password(&json).map_err(err);
+    }
+    for (i, p) in parts.iter().enumerate() {
+        part_entry(host, i + 1)?.set_password(p).map_err(err)?;
+    }
+    main.set_password(&format!("{PARTS_PREFIX}{}", parts.len())).map_err(err)
 }
 
 pub fn load(host: &str) -> Option<Stored> {
-    let json = entry(host).ok()?.get_password().ok()?;
+    let main = entry(host).ok()?.get_password().ok()?;
+    let json = match parts_count(&main) {
+        None => main,
+        Some(n) => {
+            let mut all = String::new();
+            for i in 1..=n {
+                all.push_str(&part_entry(host, i).ok()?.get_password().ok()?);
+            }
+            all
+        }
+    };
     serde_json::from_str(&json).ok()
 }
 
 pub fn delete(host: &str) -> Result<(), String> {
-    match entry(host)?.delete_credential() {
+    let main = entry(host)?;
+    if let Some(n) = main.get_password().ok().as_deref().and_then(parts_count) {
+        delete_parts(host, n);
+    }
+    match main.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(e) => Err(e.to_string()),
     }
@@ -118,4 +185,29 @@ pub fn resolve(url: &str, cfg: &git2::Config) -> Option<Credential> {
         }
     }
     from_helper(url, cfg)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_secrets_stay_in_one_piece() {
+        assert_eq!(split_secret("{\"kind\":\"pat\"}"), vec!["{\"kind\":\"pat\"}".to_string()]);
+        assert_eq!(parts_count("{\"kind\":\"pat\"}"), None);
+    }
+
+    #[test]
+    fn long_secrets_split_and_join_back() {
+        // A long OAuth sign-in with non-ASCII and characters outside the BMP (two UTF-16 units each).
+        let s: String = "ø🙂abc".repeat(700);
+        let parts = split_secret(&s);
+        assert!(parts.len() > 1);
+        for p in &parts {
+            assert!(p.encode_utf16().count() <= PART_UNITS);
+            assert!(p.encode_utf16().count() * 2 <= 2560, "fits Windows' Credential Manager");
+        }
+        assert_eq!(parts.concat(), s);
+        assert_eq!(parts_count(&format!("{PARTS_PREFIX}{}", parts.len())), Some(parts.len()));
+    }
 }

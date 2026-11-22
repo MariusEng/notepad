@@ -125,7 +125,8 @@ export const PROVIDERS: Record<ProviderKind, ProviderInfo> = {
   },
   forgejo: {
     label: "Forgejo / Gitea",
-    baseUrl: "https://git.1011.no",
+    // Always self-hosted: no default server, the field shows an example.
+    baseUrl: "",
     editableUrl: true,
     deviceFlow: false,
     secretRequired: false,
