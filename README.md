@@ -43,6 +43,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **Light on memory**: saved files in hidden tabs drop their text after 20 s and reread it from disk when shown;
   on launch, background tabs aren't read until you open them. Unsaved edits always stay in memory (and in the
   session buffers).
+- **Relative images in Markdown** (`![](images/a.png)`) show in the formatted view (asset protocol, one allowed
+  image file at a time); the Markdown keeps the relative path.
+- **Single instance**: opening a file while Notepad runs opens it in the running app (release builds).
 - **Hot exit**: close the app at any time. Open tabs, unsaved edits and untitled documents
   are restored on the next launch, with cursor and scroll position.
 - **Split view**: right-click a tab → **Open to the Right** to see two files side by side

@@ -110,6 +110,15 @@ the features, shortcuts and file layout.
   dir, `footprint -p`): empty 93 MB WebContent + 33 MB Rust; 3×30 MB background tabs 172→81 MB; freed text stays
   in WebKit's footprint until memory pressure (`notifyutil -p org.WebKit.lowMemory` showed it drop to 74 MB).
 
+- Single instance (0.11.0): `tauri-plugin-single-instance`, RELEASE BUILDS ONLY (`#[cfg(not(debug_assertions))]`) so
+  `tauri dev` can run next to the installed app. A second launch passes its file arguments (`files_from_args`,
+  resolved against the second launch's cwd) into `PendingOpen` + `open-files`. Note: a release binary started
+  with another `HOME=` (memory measuring) still hands off to an installed Notepad that is running; quit it first.
+- Markdown images (0.11.0): Crepe `ImageBlock.proxyDomURL` → `editors/imagePaths.ts` resolves the address against
+  the tab's path → `allow_image` (lib.rs; absolute, existing, image extension only) adds that one file to the asset
+  protocol scope (empty in tauri.conf.json; Cargo feature `protocol-asset`) → `convertFileSrc`. HTML preview
+  (srcdoc) still can't show relative images.
+
 ## Gotchas found so far
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
@@ -131,8 +140,10 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.10.0)
-Latest (0.10.0): Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
+## Status (2026-11-22, version 0.11.0)
+Latest (0.11.0): single instance (release builds), relative images in formatted Markdown. Checked: a second release
+launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
+image showing. 0.10.0: Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
 background tabs load lazily on launch, 4 MB read chunks. 0.9.0: folder browser in the sidebar (below the repository), right-click New File/New Folder in both trees,
 git mark on tabs for files in a git repository (not checked by eye yet). 0.8.1: split-view pair moves to the right end of the tab bar and stays there. 0.8.0: find and replace panel (OS shortcuts, find in selection), CSV/log Select Column, Save As picks the type, HTML Preview/Source button. 0.7.0: column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
@@ -168,7 +179,5 @@ a secret, so it stays token-based.
   need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
   (their text is in buffers/), but `needsBuffer` must then not prune them.
 - Code signing and notarisation for macOS; Windows/Linux builds (e.g. Forgejo Actions).
-- Single-instance handling (opening a file while the app is running in another instance).
-- Relative image paths in Markdown (needs Tauri's asset protocol).
 - Find inside the formatted Markdown view (currently ⌘F switches to source).
 - Recent files list.

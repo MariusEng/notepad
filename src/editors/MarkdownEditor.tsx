@@ -7,6 +7,7 @@ import { activeEditor, registerEditor } from "./handle";
 import { useTabs, type Tab } from "../tabs/store";
 import { toggleSource } from "../actions";
 import { createMdFormat } from "./mdFormat";
+import { showableImageUrl } from "./imagePaths";
 
 const readAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -51,6 +52,9 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
           onUpload: readAsDataUrl,
           inlineOnUpload: readAsDataUrl,
           blockOnUpload: readAsDataUrl,
+          // Relative paths ("images/a.png") are shown from the document's folder; the Markdown keeps them as written.
+          proxyDomURL: (url: string) =>
+            showableImageUrl(useTabs.getState().tabs.find((t) => t.id === tab.id)?.path ?? null, url),
         },
       },
     });

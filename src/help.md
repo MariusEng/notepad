@@ -8,6 +8,7 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - **Drag tabs** to reorder them. Middle-click closes a tab. Right-click a tab for more: Open to the Right, Close Others, File Type, Copy Path.
 - Switch tabs with **Ctrl+Tab** / **Ctrl+Shift+Tab**, or **⌘1–⌘8** (Ctrl+1–8), **⌘9** for the last tab.
 - **Split view**: right-click a tab → *Open to the Right*. The two tabs shown side by side move to the right end of the tab bar, framed together, and stay there (also when you switch which file a pane shows). Drag the divider to resize; double-click it to reset.
+- **One Notepad**: opening a file while Notepad is running (from Explorer, Finder or the command line) opens it as a tab in the running app.
 - **Hot exit**: quit at any time. Tabs, unsaved edits and untitled documents come back on the next launch.
 - If a file changes in another program, a clean tab reloads by itself; with unsaved edits a banner lets you choose.
 - **Light on memory**: a saved file in a tab you aren't looking at lets go of its text after 20 seconds and reads it again from disk when you come back (it may take a moment for a big file). Tabs with unsaved edits always keep their text.
@@ -17,6 +18,7 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - Formatted editing: select text for a floating toolbar, type `/` for blocks, or use Markdown shortcuts (`## `, `- `, `> `, `**bold**`). The formatting bar under the tabs can be hidden in the View menu.
 - HTML files open in a **preview** (scripts don't run in it). While you edit the source, the status bar button says **Preview**; click it (or press ⌘/ · Ctrl+/) to see the page, and **Source** to go back.
 - **⌘/** (Ctrl+/) switches Markdown between the formatted view and the **source**.
+- **Images with relative paths** (`![](images/photo.png)`, `../shared/logo.svg`) show in the formatted view, read from the document's folder. The Markdown keeps the path as you wrote it. Pasted or dropped images are embedded in the file.
 
 ## Code
 

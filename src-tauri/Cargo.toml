@@ -1,6 +1,6 @@
 [package]
 name = "notepad"
-version = "0.10.0"
+version = "0.11.0"
 description = "A modern notepad with WYSIWYG Markdown and syntax highlighting"
 edition = "2021"
 
@@ -12,7 +12,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-window-state = "2"
 serde = { version = "1", features = ["derive"] }
@@ -28,6 +28,7 @@ url = "2"
 encoding_rs = "0.8"
 # Sidebar "Move to Trash" (macOS Trash, Windows Recycle Bin, freedesktop trash)
 trash = "5"
+tauri-plugin-single-instance = "2"
 
 # libgit2 uses the system TLS on macOS and Windows, but its openssl-sys dependency still gets built on
 # every unix: vendoring OpenSSL means no Homebrew/OpenSSL install is needed (adds a minute to the first build).

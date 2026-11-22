@@ -13,6 +13,10 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
+// Only release builds use it (see run()).
+#[cfg(debug_assertions)]
+use tauri_plugin_single_instance as _;
+
 mod creds;
 mod files;
 mod git_cmds;
@@ -80,6 +84,26 @@ fn read_file_range(path: String, offset: u64, len: u64) -> Result<tauri::ipc::Re
     let mut buf = Vec::with_capacity(len.min(64 << 20) as usize);
     f.take(len).read_to_end(&mut buf).map_err(|e| format!("{path}: {e}"))?;
     Ok(tauri::ipc::Response::new(buf))
+}
+
+/// Image types a Markdown document may show from disk.
+const IMAGE_EXTS: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif", "apng"];
+
+/// Lets the webview show one image file through the asset protocol (Markdown images with relative paths). Only
+/// existing files with an image extension: the scope starts empty, so nothing else on disk becomes readable.
+fn is_image_file(path: &Path) -> bool {
+    let ext = path.extension().and_then(|e| e.to_str()).map(|e| e.to_ascii_lowercase());
+    matches!(ext, Some(e) if IMAGE_EXTS.contains(&e.as_str())) && path.is_file()
+}
+
+#[tauri::command]
+fn allow_image(app: AppHandle, path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if !p.is_absolute() || !is_image_file(p) {
+        return Err(format!("not an image file: {path}"));
+    }
+    app.asset_protocol_scope().allow_file(p).map_err(|e| e.to_string())?;
+    Ok(path)
 }
 
 /// Text → bytes in `encoding` (a WHATWG label such as "utf-8", "windows-1252", "utf-16le", "shift_jis").
@@ -311,6 +335,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn only_existing_image_files_are_allowed() {
+        let d = std::env::temp_dir().join(format!("notepad-img-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("a.PNG"), "x").unwrap();
+        std::fs::write(d.join("id_rsa"), "x").unwrap();
+        assert!(is_image_file(&d.join("a.PNG")));
+        assert!(!is_image_file(&d.join("id_rsa")));
+        assert!(!is_image_file(&d.join("missing.png")));
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn files_from_args_resolves_and_filters() {
+        let d = std::env::temp_dir().join(format!("notepad-args-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("a.md"), "a").unwrap();
+        let abs = d.join("a.md").to_string_lossy().into_owned();
+        let got = files_from_args(
+            ["a.md".to_string(), "--flag".into(), "missing.md".into(), abs.clone(), "-psn_0_123".into()],
+            &d,
+        );
+        assert_eq!(got, vec![abs.clone(), abs]);
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
     fn strips_ansi_codes() {
         assert_eq!(strip_ansi("\u{1b}[31;1mError:\u{1b}[0m bad"), "Error: bad");
     }
@@ -489,6 +539,17 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     Menu::with_items(app, &[&file, &edit, &view, &window, &help])
 }
 
+/// The files among command-line arguments (options skipped), as absolute paths. Relative ones are resolved against
+/// `cwd`: for a second launch that is the folder it was started in, not the running app's.
+fn files_from_args(args: impl IntoIterator<Item = String>, cwd: &Path) -> Vec<String> {
+    args.into_iter()
+        .filter(|a| !a.starts_with('-'))
+        .map(|a| cwd.join(a)) // join keeps an absolute path as it is
+        .filter(|p| p.is_file())
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect()
+}
+
 /// Restore size, position and maximised state, but not visibility: the window
 /// stays hidden until the frontend has painted (see main.tsx).
 fn window_state_flags() -> StateFlags {
@@ -498,12 +559,27 @@ fn window_state_flags() -> StateFlags {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Windows/Linux pass files to open as command-line arguments.
-    let cli_files: Vec<String> = std::env::args()
-        .skip(1)
-        .filter(|a| !a.starts_with('-') && Path::new(a).is_file())
-        .collect();
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let cli_files = files_from_args(std::env::args().skip(1), &cwd);
 
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Must come first: a second launch (opening a file from Explorer, the command line…) hands its files to the
+    // running Notepad and exits, instead of starting a second app with its own session. Release builds only, so a
+    // dev build can run next to the installed app.
+    #[cfg(not(debug_assertions))]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            let files = files_from_args(argv.into_iter().skip(1), Path::new(&cwd));
+            if !files.is_empty() {
+                app.state::<PendingOpen>().0.lock().unwrap().extend(files);
+                let _ = app.emit("open-files", ());
+            }
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }));
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -548,6 +624,7 @@ pub fn run() {
             read_buffer,
             prune_buffers,
             take_pending_open,
+            allow_image,
             quit_app,
             format_external,
             git_cmds::fs_list_dir,
