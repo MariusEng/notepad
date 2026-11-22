@@ -1,8 +1,13 @@
-# Builds Notepad for Linux and Windows on a Linux runner (Docker).
+# Builds Notepad for Linux and Windows on a Linux runner (Docker), and publishes a release when both are green.
 #
-#  - Run it by hand: Actions → release → Run workflow (the files are kept as build artifacts), or
-#  - push a version tag (git tag v0.11.0 && git push origin v0.11.0): the files are also attached to the release
-#    for that tag. The macOS build is made on the Mac and attached with scripts/forgejo-release.sh.
+#  - Every push to main builds both. If both succeed and there is no release yet for the version in package.json,
+#    the `release` job creates release v<version> (tagging the built commit) with the installers attached and the
+#    commit titles since the previous release as notes. Same version as an existing release (e.g. a docs-only
+#    push): it builds, but publishes nothing.
+#  - Pushing a tag by hand (git tag v0.12.0 && git push origin v0.12.0) builds that commit and attaches the files to
+#    that tag's release.
+#  - Actions → release → Run workflow: builds only (download the files from the run's artifacts).
+#  - macOS is built on a Mac and attached to the same release with scripts/release-mac.sh.
 #
 # Each job's output is also attached to the draft release "CI logs" (read with scripts/ci-log.sh), because this
 # Forgejo has no API for job logs.
@@ -14,6 +19,7 @@ name: release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -70,14 +76,6 @@ jobs:
           name: notepad-linux
           path: out/
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORGEJO_URL: ${{ github.server_url }}
-          FORGEJO_REPO: ${{ github.repository }}
-        run: scripts/forgejo-release.sh "${GITHUB_REF_NAME}" out/*
-
       - name: Upload build log
         if: always()
         env:
@@ -126,14 +124,6 @@ jobs:
           name: notepad-windows
           path: out/
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORGEJO_URL: ${{ github.server_url }}
-          FORGEJO_REPO: ${{ github.repository }}
-        run: scripts/forgejo-release.sh "${GITHUB_REF_NAME}" out/*
-
       - name: Upload build log
         if: always()
         env:
@@ -141,3 +131,70 @@ jobs:
           FORGEJO_URL: ${{ github.server_url }}
           FORGEJO_REPO: ${{ github.repository }}
         run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
+
+  # Runs only when both builds are green.
+  release:
+    needs: [linux, windows]
+    if: github.event_name == 'push'
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    env:
+      FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      FORGEJO_URL: ${{ github.server_url }}
+      FORGEJO_REPO: ${{ github.repository }}
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history for the release notes
+
+      - name: Decide
+        id: decide
+        run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
+          command -v python3 >/dev/null || { apt-get update && apt-get install -y --no-install-recommends python3; }
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            tag="v$(node -p 'require("./package.json").version')"
+            code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: token $FORGEJO_TOKEN" \
+              "$FORGEJO_URL/api/v1/repos/$FORGEJO_REPO/releases/tags/$tag")
+            if [ "$code" = "200" ]; then
+              echo "$tag already exists: not publishing (bump the version to make a release)"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          prev=$(git tag -l 'v*' --sort=-v:refname | grep -vx "$tag" | head -1 || true)
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty='- %s' ${prev:+$prev..}"${GITHUB_SHA}" | head -60
+            echo
+            echo "## Downloads"
+            echo
+            echo "- **Windows**: \`Notepad_*_x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
+            echo "- **Linux**: \`.deb\` (Debian/Ubuntu), \`.rpm\` (Fedora/openSUSE) or \`.AppImage\` (any distribution)"
+            echo "- **macOS** (Apple Silicon): \`.dmg\`, added from a Mac (unsigned: right-click → Open the first time)"
+          } > /tmp/notes.md
+          cat /tmp/notes.md
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+      - uses: https://code.forgejo.org/actions/download-artifact@v3
+        if: steps.decide.outputs.publish == 'true'
+        with:
+          path: dist-release
+
+      - name: Publish
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          FORGEJO_TARGET: ${{ github.sha }}
+        run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
+          ls -laR dist-release
+          RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/forgejo-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
+
+      - name: Upload build log
+        if: always()
+        run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-release-${{ job.status }}.log"

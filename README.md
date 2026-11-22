@@ -116,12 +116,13 @@ cd src-tauri && cargo test
 
 ### Releases
 
-- **Linux and Windows**: `.forgejo/workflows/release.yml` runs on a Forgejo runner with the `docker` label. Push a
-  tag (`git tag v0.11.1 && git push origin v0.11.1`) and it builds `.deb`, `.rpm`, `.AppImage` and a Windows NSIS
-  installer (cross-compiled on Linux with cargo-xwin), and attaches them to the release for that tag. Actions →
-  release → *Run workflow* builds without a release (download the files from the run's artifacts).
-- **macOS** is built on a Mac: `npx tauri build --bundles app,dmg`, then attach the `.dmg` to the same release:
-  `FORGEJO_TOKEN=… scripts/forgejo-release.sh v0.11.1 src-tauri/target/release/bundle/dmg/*.dmg`.
+- **Automatic releases**: every push to `main` builds `.deb`, `.rpm`, `.AppImage` and a Windows NSIS installer
+  (cross-compiled on Linux with cargo-xwin) on a Forgejo runner with the `docker` label
+  (`.forgejo/workflows/release.yml`). When both builds are green and the version in `package.json` has no release
+  yet, it publishes release `v<version>` with the installers and the commit titles since the last release. So:
+  bump the version → push → release. Pushing a `v*` tag by hand also works; Actions → release → *Run workflow*
+  only builds.
+- **macOS** is built on a Mac and added to that release: `scripts/release-mac.sh` (after the workflow is green).
 - **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
   `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
 - Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
