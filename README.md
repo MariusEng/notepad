@@ -123,6 +123,11 @@ cd src-tauri && cargo test
   bump the version → push → release. Pushing a `v*` tag by hand also works; Actions → release → *Run workflow*
   only builds.
 - **macOS** is built on a Mac and added to that release: `scripts/release-mac.sh` (after the workflow is green).
+- **deling.1011.no/notepad**: the release is also published there for friends (`scripts/deling-publish.sh`). CI
+  publishes Linux + Windows with the Actions secret `DELING_TOKEN` (`make api-token` in the deling repo on its
+  server); `scripts/release-mac.sh` then publishes the whole set again with the dmg, because deling replaces a
+  release as a whole. On the Mac the token is read from the keychain item `deling-api-token`
+  (`security add-generic-password -s deling-api-token -a deling -w '<token>'`). No token = skipped, not failed.
 - **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
   `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
 - Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
@@ -153,6 +158,8 @@ src/
   theme/                design tokens (light/dark) and OS theme following
 .forgejo/workflows/    release builds for Linux and Windows (Forgejo Actions)
 scripts/forgejo-release.sh  attach files to the Forgejo release of a tag
+scripts/deling-publish.sh  publish a version on deling.1011.no/notepad (all files at once)
+scripts/release-mac.sh  build the macOS dmg, attach it to the release, republish everything on deling
 scripts/ci-log.sh       read the build logs the workflow attaches to the draft release "CI logs"
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
 src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"

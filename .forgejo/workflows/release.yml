@@ -7,7 +7,10 @@
 #  - Pushing a tag by hand (git tag v0.12.0 && git push origin v0.12.0) builds that commit and attaches the files to
 #    that tag's release.
 #  - Actions → release → Run workflow: builds only (download the files from the run's artifacts).
-#  - macOS is built on a Mac and attached to the same release with scripts/release-mac.sh.
+#  - The release is also published for friends on https://deling.1011.no/notepad (Actions secret DELING_TOKEN;
+#    see scripts/deling-publish.sh).
+#  - macOS is built on a Mac and attached to the same release with scripts/release-mac.sh, which also publishes
+#    the full set (with the dmg) on deling again.
 #
 # Each job's output is also attached to the draft release "CI logs" (read with scripts/ci-log.sh), because this
 # Forgejo has no API for job logs.
@@ -194,6 +197,23 @@ jobs:
           exec > >(tee -a /tmp/ci.log) 2>&1
           ls -laR dist-release
           RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/forgejo-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
+
+      # Friends download from https://deling.1011.no/notepad. Linux and Windows go up now; scripts/release-mac.sh
+      # publishes the whole set again with the macOS dmg (deling replaces a release as a whole).
+      - name: Publish on deling.1011.no
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          DELING_TOKEN: ${{ secrets.DELING_TOKEN }}
+        run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
+          {
+            echo "# Notepad"
+            echo
+            echo "A minimal notepad for macOS, Windows and Linux. Markdown is the default: you edit formatted text, and the file on disk stays plain \`.md\`."
+            echo
+            cat /tmp/notes.md
+          } > /tmp/deling-readme.md
+          scripts/deling-publish.sh "${{ steps.decide.outputs.tag }}" /tmp/deling-readme.md dist-release/*/*
 
       - name: Upload build log
         if: always()

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Builds the macOS app (Apple Silicon .dmg) here and attaches it to the release of the current version, which the
-# Forgejo workflow creates when a push to main builds green. Run it on the Mac after that release exists:
+# Forgejo workflow creates when a push to main builds green, then publishes all files of that version (Linux,
+# Windows and this dmg) on deling.1011.no/notepad (needs the token, see deling-publish.sh). Run it on the Mac after
+# that release exists:
 #
 #   scripts/release-mac.sh            # version from package.json
 #   scripts/release-mac.sh v0.12.0    # another tag (check out that commit first)
@@ -26,3 +28,24 @@ npx tauri build --bundles app,dmg
 dmg=$(ls src-tauri/target/release/bundle/dmg/Notepad_"${version}"_*.dmg)
 FORGEJO_TOKEN="$token" scripts/forgejo-release.sh "$tag" "$dmg"
 echo "Attached $(basename "$dmg") to $url/$repo/releases/tag/$tag"
+
+# deling.1011.no replaces a release as a whole, so publish every file of this version there again, now with the dmg.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+curl -fsS -H "Authorization: token $token" "$url/api/v1/repos/$repo/releases/tags/$tag" >"$work/release.json"
+python3 - "$work" <<'PY'
+import json, sys
+work = sys.argv[1]
+r = json.load(open(f"{work}/release.json"))
+with open(f"{work}/README.md", "w") as f:
+    f.write("# Notepad\n\nA minimal notepad for macOS, Windows and Linux. Markdown is the default: you edit formatted "
+            "text, and the file on disk stays plain `.md`.\n\n" + (r.get("body") or ""))
+with open(f"{work}/assets.txt", "w") as f:
+    for a in r["assets"]:
+        f.write(f"{a['name']}\t{a['browser_download_url']}\n")
+PY
+mkdir -p "$work/files"
+while IFS=$'\t' read -r name dl; do
+  curl -fsSL -H "Authorization: token $token" -o "$work/files/$name" "$dl"
+done <"$work/assets.txt"
+scripts/deling-publish.sh "$tag" "$work/README.md" "$work"/files/*
