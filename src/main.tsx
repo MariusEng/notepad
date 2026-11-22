@@ -32,6 +32,7 @@ import {
 } from "./git/actions";
 import { openFolder, restoreFolder } from "./sidebar/actions";
 import { activeEditor } from "./editors/handle";
+import { startUnloading } from "./tabs/unload";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
 import {
@@ -105,6 +106,7 @@ async function start() {
 
   await restoreSession();
   startSessionAutosave();
+  startUnloading();
   void restoreRepo();
   void restoreFolder();
 

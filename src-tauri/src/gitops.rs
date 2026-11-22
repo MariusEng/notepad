@@ -441,6 +441,38 @@ pub fn commit_file(root: &str, file: &str, author: Option<&str>) -> Res<Option<S
     Ok(commit_paths(root, &[rel], &message, who)?.map(|_| message))
 }
 
+/// Commits the removal of a deleted file or folder (every tracked file under it). Returns the message, or None when
+/// nothing tracked was there. Other changes in the working tree are left alone.
+pub fn commit_removal(root: &str, path: &str, author: Option<&str>) -> Res<Option<String>> {
+    let Some(rel) = relative_to(root, path) else {
+        return Ok(None);
+    };
+    let repo = Repository::open(root).map_err(err)?;
+    let mut rels: Vec<String> = Vec::new();
+    if let Ok(tree) = repo.head().and_then(|h| h.peel_to_tree()) {
+        let prefix = format!("{rel}/");
+        tree.walk(git2::TreeWalkMode::PreOrder, |dir, entry| {
+            if entry.kind() == Some(git2::ObjectType::Blob) {
+                let p = format!("{dir}{}", entry.name().unwrap_or_default());
+                if p == rel || p.starts_with(&prefix) {
+                    rels.push(p);
+                }
+            }
+            git2::TreeWalkResult::Ok
+        })
+        .map_err(err)?;
+    }
+    // Only paths that are really gone (a folder may have been recreated meanwhile).
+    rels.retain(|r| !Path::new(root).join(r).exists());
+    if rels.is_empty() {
+        return Ok(None);
+    }
+    let message = format!("Delete {rel}");
+    let email = author.map(|a| format!("{a}@users.noreply.local"));
+    let who = author.zip(email.as_deref());
+    Ok(commit_paths(root, &rels, &message, who)?.map(|_| message))
+}
+
 // ---------------------------------------------------------------- sync
 
 fn result(repo: &Repository, state: &str, message: &str) -> Res<SyncResult> {

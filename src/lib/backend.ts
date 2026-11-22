@@ -29,7 +29,7 @@ export interface FileData {
 export const MAX_FILE_BYTES = 512 * 1024 * 1024;
 /** Files above this size load in the background with a progress bar. */
 export const LARGE_FILE_BYTES = 4 * 1024 * 1024;
-const CHUNK = 16 * 1024 * 1024;
+const CHUNK = 4 * 1024 * 1024;
 
 export const formatSize = (n: number) =>
   n >= 1024 * 1024 * 1024
@@ -125,6 +125,8 @@ export const files = {
   /** Creates an empty file / folder in `dir`; resolves to its full path. Fails if the name exists. */
   createFile: (dir: string, name: string) => invoke<string>("fs_create_file", { dir, name }),
   createDir: (dir: string, name: string) => invoke<string>("fs_create_dir", { dir, name }),
+  /** Moves a file or folder to the Trash (Recycle Bin). */
+  trash: (path: string) => invoke<void>("fs_trash", { path }),
   /** The git repository a path is in, or null (not in one, or ignored). */
   gitInfo: (path: string) => invoke<GitPathInfo | null>("git_path_info", { path }),
 };
@@ -136,6 +138,9 @@ export const git = {
   /** Commits one saved file; resolves to the commit message, or null if there was nothing to commit. */
   commitFile: (root: string, file: string, author: string | null) =>
     invoke<string | null>("git_commit_file", { root, file, author }),
+  /** Commits the removal of a deleted file or folder; null if nothing tracked was there. */
+  commitRemoval: (root: string, path: string, author: string | null) =>
+    invoke<string | null>("git_commit_removal", { root, path, author }),
   sync: (root: string) => invoke<SyncResult>("git_sync", { root }),
   clone: (url: string, dest: string) => invoke<RepoInfo>("git_clone", { url, dest }),
   branches: (root: string) => invoke<BranchInfo[]>("git_branches", { root }),

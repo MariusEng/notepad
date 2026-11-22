@@ -205,6 +205,31 @@ fn unchanged_ignored_and_outside_files_make_no_commit() {
 }
 
 #[test]
+fn removing_a_folder_commits_only_its_files() {
+    let remote = Remote::new();
+    let (_d, a) = remote.clone_to("a");
+    save(&a, "docs/a.md", "a\n");
+    save(&a, "docs/sub/b.md", "b\n");
+    save(&a, "docs2/c.md", "c\n");
+    save(&a, "keep.md", "k\n");
+    write(&a, "keep.md", "edited, not saved\n"); // a local change that must stay out of the commit
+    fs::remove_dir_all(Path::new(&a).join("docs")).unwrap();
+    assert_eq!(gitops::commit_removal(&a, &format!("{a}/docs"), None).unwrap().as_deref(), Some("Delete docs"));
+    let repo = Repository::open(&a).unwrap();
+    let head = repo.head().unwrap().peel_to_tree().unwrap();
+    assert!(head.get_path(Path::new("docs/a.md")).is_err());
+    assert!(head.get_path(Path::new("docs/sub/b.md")).is_err());
+    assert!(head.get_path(Path::new("docs2/c.md")).is_ok(), "a folder with a similar name stays");
+    let keep = head.get_path(Path::new("keep.md")).unwrap().to_object(&repo).unwrap();
+    assert_eq!(keep.as_blob().unwrap().content(), b"k\n");
+    // Nothing tracked left there: no commit.
+    assert_eq!(gitops::commit_removal(&a, &format!("{a}/docs"), None).unwrap(), None);
+    // A single file works too.
+    fs::remove_file(Path::new(&a).join("docs2/c.md")).unwrap();
+    assert_eq!(gitops::commit_removal(&a, &format!("{a}/docs2/c.md"), None).unwrap().as_deref(), Some("Delete docs2/c.md"));
+}
+
+#[test]
 fn listing_and_opening() {
     let remote = Remote::new();
     let (_d, a) = remote.clone_to("a");

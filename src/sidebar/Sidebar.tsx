@@ -7,7 +7,7 @@ import { openFiles } from "../actions";
 import { showBranchMenu, toggleSidebar } from "../git/actions";
 import { useGit } from "../git/store";
 import type { DirEntry, GitPathInfo } from "../git/types";
-import { baseName, closeFolder, createEntry, openFolder, pathIn } from "./actions";
+import { baseName, closeFolder, createEntry, deleteEntry, openFolder, pathIn, trashLabel } from "./actions";
 
 /**
  * Left sidebar: the open git repository on top, the open folder below (either can be absent). Both are quiet file
@@ -229,6 +229,8 @@ async function entryMenu(root: string, rel: string, entry: DirEntry | null, setC
         ? [
             { item: "Separator" as const },
             { id: "tree-copy-path", text: "Copy Path", action: () => void navigator.clipboard.writeText(full).catch(() => {}) },
+            { item: "Separator" as const },
+            { id: "tree-delete", text: `${trashLabel}…`, action: () => void deleteEntry(full, entry.isDir) },
           ]
         : []),
     ],

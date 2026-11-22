@@ -40,6 +40,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   - shell: `brew install shfmt`
   - Perl: `brew install perltidy`
   - PowerShell: `Install-Module PSScriptAnalyzer` (in `pwsh`)
+- **Light on memory**: saved files in hidden tabs drop their text after 20 s and reread it from disk when shown;
+  on launch, background tabs aren't read until you open them. Unsaved edits always stay in memory (and in the
+  session buffers).
 - **Hot exit**: close the app at any time. Open tabs, unsaved edits and untitled documents
   are restored on the next launch, with cursor and scroll position.
 - **Split view**: right-click a tab → **Open to the Right** to see two files side by side
@@ -47,7 +50,8 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
 - **Sidebar with a folder browser** (File → Open Folder…, ⌥⌘O): any folder, shown under the repository when
   one is open (drag the line between them to resize). Right-click in either tree → **New File…** / **New Folder…**
-  (inline name field; new files open in a tab).
+  (inline name field; new files open in a tab) and **Move to Trash…** (asks first; in the open repository the
+  deletion is committed and pushed).
 - **Git mark on tabs**: files inside a git repository (not ignored) get an orange git mark in the tab bar, so
   it's obvious which files are committed and pushed and shouldn't hold secrets. The tooltip names the repository.
 - **Git repositories** (File → Open Repository…, ⇧⌘O): open any folder inside an existing repository and edit

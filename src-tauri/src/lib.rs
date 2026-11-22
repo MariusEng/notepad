@@ -554,6 +554,8 @@ pub fn run() {
             git_cmds::fs_create_file,
             git_cmds::fs_create_dir,
             git_cmds::git_path_info,
+            git_cmds::fs_trash,
+            git_cmds::git_commit_removal,
             git_cmds::git_open,
             git_cmds::git_info,
             git_cmds::git_list_dir,

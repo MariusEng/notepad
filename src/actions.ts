@@ -5,6 +5,7 @@ import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
 import { LANGUAGES, LANGUAGE_LIST, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
 import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
+import { ensureLoaded } from "./tabs/unload";
 
 const store = () => useTabs.getState();
 
@@ -131,6 +132,7 @@ export async function loadFileInto(id: string, path: string, encoding: string | 
     reportEncoding(file, fileName(path));
     store().replaceContent(id, content, {
       ...fields,
+      unloaded: undefined,
       dirty: false,
       external: undefined,
       loading: undefined,
@@ -149,6 +151,7 @@ const toDisk = (t: Tab) => (t.eol === "\r\n" ? t.content.replace(/\n/g, "\r\n") 
 
 /** Saves the tab; untitled tabs go through Save As. Returns false if cancelled or failed. */
 export async function saveTab(id = store().activeId): Promise<boolean> {
+  if (id) await ensureLoaded(id); // a hidden tab may have dropped its text: never write an empty file
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return false;
@@ -179,6 +182,7 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
  * the name with that type's extension. Typing another known extension in the dialog wins.
  */
 export async function saveTabAs(id = store().activeId, language?: LanguageId): Promise<boolean> {
+  if (id) await ensureLoaded(id);
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return false;
@@ -250,7 +254,7 @@ export async function reloadTab(id: string) {
   try {
     const file = await backend.readFile(tab.path, readEncodingOf(tab));
     const { content, ...fields } = fromFile(file);
-    store().replaceContent(id, content, { ...fields, dirty: false, external: undefined });
+    store().replaceContent(id, content, { ...fields, dirty: false, external: undefined, unloaded: undefined });
   } catch (e) {
     store().notify(`Could not reload ${tab.title}: ${e}`, "error");
   }
@@ -258,7 +262,8 @@ export async function reloadTab(id: string) {
 
 /** Changes the file type. An untitled tab also gets the new extension ("Untitled-2.md" → "Untitled-2.sql"),
  *  so Save As suggests the right name. A saved file keeps its name and path. */
-export function setLanguage(id: string, language: LanguageId) {
+export async function setLanguage(id: string, language: LanguageId) {
+  await ensureLoaded(id);
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.language === language) return;
@@ -269,7 +274,8 @@ export function setLanguage(id: string, language: LanguageId) {
   store().replaceContent(id, tab.content, patch);
 }
 
-export function toggleEol(id: string) {
+export async function toggleEol(id: string) {
+  await ensureLoaded(id);
   const tab = store().tabs.find((t) => t.id === id);
   if (tab) store().update(id, { eol: tab.eol === "\n" ? "\r\n" : "\n", dirty: true });
 }
@@ -283,6 +289,8 @@ export function toggleSource(id = store().activeId) {
 
 /** Format Document (⇧⌥F). In code editors it is a single undoable edit. */
 export async function formatActive() {
+  const id = activeTab()?.id;
+  if (id) await ensureLoaded(id);
   flushEdits();
   const tab = activeTab();
   if (!tab || tab.loading) return;
@@ -329,6 +337,7 @@ export async function reopenWithEncoding(id: string, encoding: string) {
 
 /** Saves the file in another encoding (an untitled tab keeps it for when it is saved). */
 export async function saveWithEncoding(id: string, encoding: string) {
+  await ensureLoaded(id);
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return;
@@ -339,7 +348,8 @@ export async function saveWithEncoding(id: string, encoding: string) {
   if (!(await saveTab(id))) store().update(id, before);
 }
 
-export function toggleBom(id: string) {
+export async function toggleBom(id: string) {
+  await ensureLoaded(id);
   const tab = store().tabs.find((t) => t.id === id);
   if (tab && tab.encoding === "utf-8") store().update(id, { bom: !tab.bom, dirty: true });
 }

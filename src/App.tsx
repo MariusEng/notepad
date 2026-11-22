@@ -85,7 +85,7 @@ function Pane({ id, split }: { id: string; split: boolean }) {
         <div className="pane-fill">
           {tab.loading ? (
             <Loading name={tab.title} {...tab.loading} />
-          ) : tab.language === "markdown" && !tab.mdSource ? (
+          ) : tab.unloaded ? null /* being read back from disk (tabs/unload.ts); takes a moment */ :  tab.language === "markdown" && !tab.mdSource ? (
             <MarkdownEditor key={`md:${tab.id}:${tab.version}`} tab={tab} />
           ) : tab.language === "html" && !tab.mdSource ? (
             <HtmlPreview key={`html:${tab.id}`} tab={tab} />

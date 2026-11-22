@@ -36,6 +36,18 @@ pub fn fs_create_dir(dir: String, name: String) -> Res<String> {
     files::create_dir(&dir, &name)
 }
 
+/// Moves a file or folder to the Trash.
+#[tauri::command]
+pub fn fs_trash(path: String) -> Res<()> {
+    files::move_to_trash(&path)
+}
+
+/// Commits the removal of a file or folder that was deleted (moved to the Trash). None: nothing tracked was there.
+#[tauri::command]
+pub fn git_commit_removal(root: String, path: String, author: Option<String>) -> Res<Option<String>> {
+    gitops::commit_removal(&root, &path, author.as_deref())
+}
+
 /// The git repository a file belongs to (None: not in one, or ignored), for the tab bar's git mark.
 #[tauri::command]
 pub fn git_path_info(path: String) -> Option<GitPathInfo> {

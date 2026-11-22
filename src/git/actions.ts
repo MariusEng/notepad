@@ -168,6 +168,25 @@ export function afterSave(path: string) {
   });
 }
 
+/** Called after a file or folder was moved to the Trash: commit the removal and push, when it was in the repository. */
+export function afterDelete(path: string) {
+  const { repo } = useGit.getState();
+  if (!repo || !useSettings.getState().autoCommit || !isInRepo(repo.root, path)) return;
+  void enqueue(async () => {
+    try {
+      setSync("syncing", "Committing…");
+      const message = await git.commitRemoval(repo.root, path, accountFor(repo)?.username ?? null);
+      if (message === null && (useGit.getState().repo?.ahead ?? 0) === 0) {
+        setSync("synced", "Nothing to commit");
+        return;
+      }
+      await runSync(repo.root, true);
+    } catch (e) {
+      failed(e);
+    }
+  });
+}
+
 /** Sync when the window comes back to the front, at most every two minutes. */
 export function syncOnFocus() {
   const { repo, sync } = useGit.getState();

@@ -10,6 +10,7 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - **Split view**: right-click a tab → *Open to the Right*. The two tabs shown side by side move to the right end of the tab bar, framed together, and stay there (also when you switch which file a pane shows). Drag the divider to resize; double-click it to reset.
 - **Hot exit**: quit at any time. Tabs, unsaved edits and untitled documents come back on the next launch.
 - If a file changes in another program, a clean tab reloads by itself; with unsaved edits a banner lets you choose.
+- **Light on memory**: a saved file in a tab you aren't looking at lets go of its text after 20 seconds and reads it again from disk when you come back (it may take a moment for a big file). Tabs with unsaved edits always keep their text.
 
 ## Markdown and HTML
 
@@ -82,6 +83,7 @@ Select a rectangle of text across several lines, for example one column of a CSV
 - **File → Open Folder…** (⌥⌘O · Ctrl+Alt+O) shows any folder in the sidebar. With a repository open too, the repository is on top and the folder below; drag the line between them to share the height (double-click: half and half).
 - **Right-click** a file or folder in either tree for **New File…** and **New Folder…** (created in the folder you clicked, or next to the file). Type the name and press Enter; Esc cancels. New files open in a tab. Right-clicking empty space creates at the top level.
 - Click the folder's name for New File, New Folder, Open Another Folder and Close Folder.
+- **Delete**: right-click a file or folder → **Move to Trash…** (Windows/Linux: **Delete…**). It asks first and goes to the Trash (Recycle Bin), so it can be restored. In the open repository the deletion is also committed and pushed. Open tabs of deleted files close; a tab with unsaved edits stays open and says the file is gone.
 - **Files in git are marked**: a tab whose file is in a git repository (and not ignored) shows an orange git mark, so you know not to put passwords or other secrets in it. Hover the mark to see which repository, and whether saving commits and pushes it. A folder that is inside a repository shows the same mark next to its name.
 
 ## Git repositories

@@ -62,6 +62,15 @@ pub fn create_dir(dir: &str, name: &str) -> Res<String> {
     Ok(path.to_string_lossy().to_string())
 }
 
+/// Moves a file or folder to the Trash (Recycle Bin on Windows), so a mistake can be undone there.
+pub fn move_to_trash(path: &str) -> Res<()> {
+    let p = Path::new(path);
+    if fs::symlink_metadata(p).is_err() {
+        return Err(format!("{path} doesn't exist"));
+    }
+    trash::delete(p).map_err(|e| format!("Couldn't move {} to the Trash: {e}", p.display()))
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GitPathInfo {
@@ -141,6 +150,11 @@ mod tests {
             vec![("Sub".into(), true), (".env".into(), false), ("notes.md".into(), false)]
         );
         let _ = fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn moves_to_trash_and_refuses_missing_paths() {
+        assert!(move_to_trash("/definitely/not/here/x.md").unwrap_err().contains("doesn't exist"));
     }
 
     #[test]

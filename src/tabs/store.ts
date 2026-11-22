@@ -28,6 +28,9 @@ export interface Tab {
   external?: "modified" | "deleted";
   /** Set while a big file is read from disk in the background; the pane shows progress instead of an editor. */
   loading?: { loaded: number; total: number };
+  /** The text was dropped to save memory (a clean file no pane shows); `content` is "" until it is read back
+   *  from disk (tabs/unload.ts). Await `ensureLoaded` before using the text of a tab that may be hidden. */
+  unloaded?: boolean;
   /** Bumped when content is replaced from outside the editor (reload, format) to remount it. */
   version: number;
 }

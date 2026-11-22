@@ -1,11 +1,11 @@
-import { open as pickFolder } from "@tauri-apps/plugin-dialog";
+import { ask, open as pickFolder } from "@tauri-apps/plugin-dialog";
 import { create } from "zustand";
-import { files } from "../lib/backend";
+import { files, isMac } from "../lib/backend";
 import { useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
 import { useGit } from "../git/store";
-import { joinPath } from "../git/actions";
-import { openFiles } from "../actions";
+import { afterDelete, isInRepo, joinPath } from "../git/actions";
+import { newTab, openFiles } from "../actions";
 import type { GitPathInfo } from "../git/types";
 
 const notify = (text: string, kind: "info" | "error" = "info") => useTabs.getState().notify(text, kind);
@@ -43,6 +43,53 @@ export async function createEntry(dir: string, name: string, kind: "file" | "fol
     notify(String(e), "error");
     return null;
   }
+}
+
+const under = (path: string, p: string) => {
+  const a = p.replace(/\\/g, "/");
+  const b = path.replace(/\\/g, "/");
+  return a === b || a.startsWith(b + "/");
+};
+
+export const trashLabel = isMac ? "Move to Trash" : "Delete";
+
+/**
+ * Moves a file or folder to the Trash after asking. Open tabs of those files close (ones with unsaved edits stay
+ * open and show that the file is gone). In the open repository the removal is committed and pushed.
+ */
+export async function deleteEntry(path: string, isDir: boolean) {
+  const name = baseName(path);
+  const { repo } = useGit.getState();
+  const synced = !!repo && useSettings.getState().autoCommit && isInRepo(repo.root, path);
+  const what = isDir ? `the folder "${name}" and everything in it` : `"${name}"`;
+  const bin = isMac ? "the Trash" : "the Recycle Bin";
+  const detail = synced
+    ? `The deletion is committed and pushed to ${repo!.name}, so it is gone from the server too (the history keeps it).`
+    : `You can get it back from ${bin}.`;
+  const ok = await ask(`${isMac ? "Move" : "Delete"} ${what}${isMac ? " to the Trash" : ""}?\n\n${detail}`, {
+    title: trashLabel,
+    kind: "warning",
+    okLabel: trashLabel,
+    cancelLabel: "Cancel",
+  });
+  if (!ok) return;
+  try {
+    await files.trash(path);
+  } catch (e) {
+    notify(String(e), "error");
+    return;
+  }
+  const tabs = useTabs.getState();
+  for (const t of tabs.tabs) {
+    if (!t.path || !under(path, t.path)) continue;
+    if (t.dirty) tabs.update(t.id, { external: "deleted" });
+    else tabs.removeTab(t.id);
+  }
+  if (useTabs.getState().tabs.length === 0) newTab();
+  const folder = useSettings.getState().folderRoot;
+  if (folder && under(path, folder)) closeFolder();
+  refreshTrees();
+  afterDelete(path);
 }
 
 // ---------------------------------------------------------------- git marks on tabs

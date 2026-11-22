@@ -99,6 +99,17 @@ the features, shortcuts and file layout.
   (`--git` token; `git_path_info` via `Repository::discover`, refreshed on tab paths / treeVersion / repo changes),
   so users keep secrets out of synced files. The folder header shows the mark too.
 
+- Delete (0.10.0): right-click → Move to Trash… (`trash` crate, `fs_trash`); `gitops::commit_removal` commits every
+  tracked file under the deleted path (only those) and `git/actions.afterDelete` pushes. Clean tabs of deleted files
+  close, dirty ones get `external: "deleted"`.
+- Memory (0.10.0): `tabs/unload.ts` drops the text of clean file tabs no pane shows (≥ 64 KB, after 20 s;
+  `tab.unloaded`, content "") and rereads on show. Anything that uses a possibly hidden tab's text must
+  `await ensureLoaded(id)` first (saveTab, saveTabAs, setLanguage, toggleEol/Bom, saveWithEncoding, format) or it
+  would write an empty file. Session restore leaves background clean tabs unloaded. session.ts tracks changed
+  buffers by id (no copy of the text). Read chunks are 4 MB. Measuring (release build, isolated `HOME=` scratch
+  dir, `footprint -p`): empty 93 MB WebContent + 33 MB Rust; 3×30 MB background tabs 172→81 MB; freed text stays
+  in WebKit's footprint until memory pressure (`notifyutil -p org.WebKit.lowMemory` showed it drop to 74 MB).
+
 ## Gotchas found so far
 - The window starts hidden (`visible: false`) to avoid a theme flash. Never show it from
   `requestAnimationFrame`: WebKit doesn't run animation frames in hidden windows, so it stays
@@ -120,8 +131,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.9.0)
-Latest (0.9.0): folder browser in the sidebar (below the repository), right-click New File/New Folder in both trees,
+## Status (2026-11-22, version 0.10.0)
+Latest (0.10.0): Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
+background tabs load lazily on launch, 4 MB read chunks. 0.9.0: folder browser in the sidebar (below the repository), right-click New File/New Folder in both trees,
 git mark on tabs for files in a git repository (not checked by eye yet). 0.8.1: split-view pair moves to the right end of the tab bar and stays there. 0.8.0: find and replace panel (OS shortcuts, find in selection), CSV/log Select Column, Save As picks the type, HTML Preview/Source button. 0.7.0: column selection (mouse + keyboard), file encodings (open/reopen/save, BOM), help updated. 0.6.0: tab drag reordering with split pairs grouped, git branches (switch/create/remote, protected-branch → move to new branch + pull request), hideable sidebar, JavaScript + HTML (preview/source), CSV + log column colours, big-file streaming with progress, Help and About. None of 0.6.0 is checked by eye yet. 0.5.1: GitHub.com one-click device-code sign-in with the GitHub CLI public client id; 0.5.0: one-click browser sign-in for Forgejo/Gitea (built-in client id; the others need Notepad's own OAuth app ids filled into BUILTIN_OAUTH in src/git/types.ts); 0.4.0: git repositories (sidebar, commit+push on save, accounts via PAT/OAuth, create private repo, clone); 0.3.0: split view (two panes, right-click a tab → Open to the Right); 0.2.0: new file of type (⇧⌘N) and tab right-click File Type; tight Markdown padding, formatting bar under the tabs, SQL support (typechecked and built;
 not yet checked by eye).
 
@@ -151,14 +163,10 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
-- **TODO (user request): optimise memory use; the app should be very lightweight.** Ideas: keep only one copy of
-  big documents (today the text is in CodeMirror *and* the tab store, plus the session's `written` map), keep
-  background tabs' text out of the JS heap (drop to disk/buffers and reload on activation), unmount hidden editors
-  (already: only visible panes mount), lazy-load Milkdown/Prettier/language packs (partly done), measure with
-  Activity Monitor / WebKit's memory timeline first (WKWebView content process + Rust process).
-- **TODO (user request): delete files in a git repository**: e.g. right-click a file in the sidebar trees → Delete (the menu is `entryMenu` in sidebar/Sidebar.tsx),
-  with a confirmation; commit the deletion and push (`gitops::commit_file` already writes "Delete <file>" when the
-  file is gone), and close or mark its open tab.
+- More memory ideas (not done): after editing a big document (> 2 M chars) the store holds a flattened copy while
+  CodeMirror's lines still pin the original string (≈ 2× the file); keeping no store copy for mounted big docs would
+  need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
+  (their text is in buffers/), but `needsBuffer` must then not prune them.
 - Code signing and notarisation for macOS; Windows/Linux builds (e.g. Forgejo Actions).
 - Single-instance handling (opening a file while the app is running in another instance).
 - Relative image paths in Markdown (needs Tauri's asset protocol).

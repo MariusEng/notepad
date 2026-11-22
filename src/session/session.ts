@@ -39,12 +39,15 @@ interface Session {
   tabs: SessionTab[];
 }
 
-/** Buffer text last written per tab id, so unchanged buffers are not rewritten. */
-const written = new Map<string, string>();
+/** Tabs whose buffer file holds their current text (so it isn't rewritten), and tabs edited since. Only ids are
+ *  kept: holding the last written text would keep a second copy of every edited document in memory. */
+const onDisk = new Set<string>();
+const changed = new Set<string>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 let saving: Promise<void> = Promise.resolve();
 let restored = false;
 
+// (Unloaded tabs are clean file tabs, so they never need a buffer.)
 const needsBuffer = (t: Tab) => t.dirty || (t.path === null && t.content !== "");
 
 async function writeSession() {
@@ -54,9 +57,15 @@ async function writeSession() {
   for (const t of tabs) {
     if (!needsBuffer(t)) continue;
     keep.push(t.id);
-    if (written.get(t.id) !== t.content) {
-      await backend.writeBuffer(t.id, t.content);
-      written.set(t.id, t.content);
+    if (changed.has(t.id) || !onDisk.has(t.id)) {
+      changed.delete(t.id); // an edit while writing marks it again
+      try {
+        await backend.writeBuffer(t.id, t.content);
+        onDisk.add(t.id);
+      } catch (e) {
+        changed.add(t.id);
+        throw e;
+      }
     }
   }
   const session: Session = {
@@ -82,7 +91,7 @@ async function writeSession() {
   };
   await backend.saveState("session", JSON.stringify(session));
   await backend.pruneBuffers(keep);
-  for (const id of written.keys()) if (!keep.includes(id)) written.delete(id);
+  for (const id of onDisk) if (!keep.includes(id)) onDisk.delete(id);
 }
 
 /** Writes the session now (waits for any write already in progress). */
@@ -114,6 +123,8 @@ export async function restoreSession(): Promise<boolean> {
     console.error("could not read session", e);
   }
 
+  // Tabs the panes will show are read now; other clean files only when they are first shown (tabs/unload.ts).
+  const shown = new Set([session?.mainId ?? session?.activeId, session?.splitId].filter(Boolean));
   const tabs: Tab[] = [];
   for (const s of session?.tabs ?? []) {
     const base: Tab = {
@@ -128,7 +139,7 @@ export async function restoreSession(): Promise<boolean> {
       if (s.buffered) {
         const text = await backend.readBuffer(s.id);
         if (text === null) continue;
-        written.set(s.id, text);
+        onDisk.add(s.id);
         base.content = text;
         // Unsaved edits to a real file: warn if the file moved on underneath us.
         if (s.path) {
@@ -138,6 +149,11 @@ export async function restoreSession(): Promise<boolean> {
         }
       } else if (s.path) {
         // Clean file tab: always load the current version from disk. Big files stream in after startup.
+        if (!shown.has(s.id)) {
+          if ((await backend.fileMtime(s.path)) === null) continue; // gone: nothing to lose, drop the tab
+          tabs.push({ ...base, unloaded: true });
+          continue;
+        }
         if ((await backend.fileSize(s.path)) > LARGE_FILE_BYTES) {
           base.loading = { loaded: 0, total: 1 };
           bigFiles.push([s.id, s.path, readEncodingOf(base)]);
@@ -180,12 +196,16 @@ export function loadRestoredBigFiles() {
 /** Start autosaving the session whenever tabs change. Call after restoreSession(). */
 export function startSessionAutosave() {
   useTabs.subscribe((state, prev) => {
-    const changed =
+    if (state.tabs !== prev.tabs) {
+      const before = new Map(prev.tabs.map((t) => [t.id, t.content]));
+      for (const t of state.tabs) if (before.get(t.id) !== t.content) changed.add(t.id);
+    }
+    const moved =
       state.tabs !== prev.tabs ||
       state.activeId !== prev.activeId ||
       state.mainId !== prev.mainId ||
       state.splitId !== prev.splitId;
-    if (restored && changed) scheduleSave();
+    if (restored && moved) scheduleSave();
   });
 }
 
@@ -196,7 +216,8 @@ export function startSessionAutosave() {
 export async function checkExternalChanges() {
   const { tabs, update, replaceContent } = useTabs.getState();
   for (const t of tabs) {
-    if (!t.path || t.loading) continue;
+    // Unloaded tabs read the current file when they are shown again.
+    if (!t.path || t.loading || t.unloaded) continue;
     const mtime = await backend.fileMtime(t.path).catch(() => null);
     if (mtime === null) {
       if (t.external !== "deleted") update(t.id, { external: "deleted" });
