@@ -122,6 +122,8 @@ cd src-tauri && cargo test
   release → *Run workflow* builds without a release (download the files from the run's artifacts).
 - **macOS** is built on a Mac: `npx tauri build --bundles app,dmg`, then attach the `.dmg` to the same release:
   `FORGEJO_TOKEN=… scripts/forgejo-release.sh v0.11.1 src-tauri/target/release/bundle/dmg/*.dmg`.
+- **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
+  `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
 - Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
   → *More info* → *Run anyway*.
 
@@ -150,6 +152,7 @@ src/
   theme/                design tokens (light/dark) and OS theme following
 .forgejo/workflows/    release builds for Linux and Windows (Forgejo Actions)
 scripts/forgejo-release.sh  attach files to the Forgejo release of a tag
+scripts/ci-log.sh       read the build logs the workflow attaches to the draft release "CI logs"
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
 src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"
 src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone

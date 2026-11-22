@@ -4,6 +4,9 @@
 #  - push a version tag (git tag v0.11.0 && git push origin v0.11.0): the files are also attached to the release
 #    for that tag. The macOS build is made on the Mac and attached with scripts/forgejo-release.sh.
 #
+# Each job's output is also attached to the draft release "CI logs" (read with scripts/ci-log.sh), because this
+# Forgejo has no API for job logs.
+#
 # The runner needs the `docker` label (forgejo-runner's default). Change `runs-on` if yours is labelled otherwise.
 # The Windows installer is cross-compiled on Linux (cargo-xwin + NSIS), which Tauri calls experimental; it is
 # unsigned, so Windows SmartScreen will warn ("More info" → "Run anyway").
@@ -21,6 +24,10 @@ env:
   # linuxdeploy (AppImage) can't use FUSE inside a container; it unpacks itself instead.
   APPIMAGE_EXTRACT_AND_RUN: "1"
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   linux:
     runs-on: docker
@@ -31,6 +38,7 @@ jobs:
 
       - name: System packages
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           apt-get update
           apt-get install -y --no-install-recommends \
             build-essential curl wget file pkg-config perl \
@@ -39,16 +47,19 @@ jobs:
 
       - name: Rust
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Build
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           npm ci
           npx tauri build --bundles deb,rpm,appimage
 
       - name: Collect
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           mkdir -p out
           cp src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/rpm/*.rpm \
              src-tauri/target/release/bundle/appimage/*.AppImage out/
@@ -67,6 +78,14 @@ jobs:
           FORGEJO_REPO: ${{ github.repository }}
         run: scripts/forgejo-release.sh "${GITHUB_REF_NAME}" out/*
 
+      - name: Upload build log
+        if: always()
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGEJO_URL: ${{ github.server_url }}
+          FORGEJO_REPO: ${{ github.repository }}
+        run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-linux-${{ job.status }}.log"
+
   windows:
     runs-on: docker
     container:
@@ -77,23 +96,27 @@ jobs:
 
       - name: System packages
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           apt-get update
           apt-get install -y --no-install-recommends build-essential curl perl nsis lld llvm clang python3
           makensis -VERSION
 
       - name: Rust and cargo-xwin
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --target x86_64-pc-windows-msvc
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           "$HOME/.cargo/bin/cargo" install --locked cargo-xwin
 
       - name: Build (NSIS installer)
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           npm ci
           npx tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
 
       - name: Collect
         run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
           mkdir -p out
           cp src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe out/
           ls -la out
@@ -110,3 +133,11 @@ jobs:
           FORGEJO_URL: ${{ github.server_url }}
           FORGEJO_REPO: ${{ github.repository }}
         run: scripts/forgejo-release.sh "${GITHUB_REF_NAME}" out/*
+
+      - name: Upload build log
+        if: always()
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGEJO_URL: ${{ github.server_url }}
+          FORGEJO_REPO: ${{ github.repository }}
+        run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
