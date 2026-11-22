@@ -87,6 +87,7 @@ Select a rectangle of text across several lines, for example one column of a CSV
 ## Sidebar: folders and repositories
 
 - **File → Open Folder…** (⌥⌘O · Ctrl+Alt+O) shows any folder in the sidebar. With a repository open too, the repository is on top and the folder below; drag the line between them to share the height (double-click: half and half).
+- **Click a file** to preview it: its tab title is in *italics*, and clicking the next file replaces that tab, so browsing doesn't fill the tab bar. **Double-click** a file to open it for good (it stays when you click the next one). A preview tab also stays as soon as you edit it, or when you double-click its tab.
 - **Right-click** a file or folder in either tree for **New File…** and **New Folder…** (created in the folder you clicked, or next to the file). Type the name and press Enter; Esc cancels. New files open in a tab. Right-clicking empty space creates at the top level.
 - Click the folder's name for New File, New Folder, Open Another Folder and Close Folder.
 - **Delete**: right-click a file or folder → **Move to Trash…** (Windows/Linux: **Delete…**). It asks first and goes to the Trash (Recycle Bin), so it can be restored. In the open repository the deletion is also committed and pushed. Open tabs of deleted files close; a tab with unsaved edits stays open and says the file is gone.

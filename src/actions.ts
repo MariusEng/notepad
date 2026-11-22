@@ -71,40 +71,69 @@ export function newTab(language: LanguageId = "markdown") {
   store().addTab(baseTab({ title: nextUntitledName(language), language, mdSource: language === "html" }));
 }
 
+export interface OpenOptions {
+  /** Single click in the sidebar: open as a preview tab that the next preview replaces. */
+  preview?: boolean;
+  /** Double click in the sidebar: keep the tab open (also turns an open preview tab into a normal one). */
+  pin?: boolean;
+}
+
+/** Files being read right now, so a double click (which starts as a single click) doesn't open a file twice. */
+const opening = new Map<string, Promise<void>>();
+
 /** Opens files (or shows the Open dialog). Already-open files are focused instead. */
-export async function openFiles(paths?: string[]) {
+export async function openFiles(paths?: string[], opts: OpenOptions = {}) {
   if (!paths) {
     const picked = await open({ multiple: true, directory: false, title: "Open" });
     if (!picked) return;
     paths = Array.isArray(picked) ? picked : [picked];
   }
   for (const path of paths) {
-    const existing = store().tabs.find((t) => t.path === path);
-    if (existing) {
-      store().setActive(existing.id);
-      continue;
-    }
+    const running = opening.get(path);
+    if (running) await running;
+    const job = openOne(path, opts);
+    opening.set(path, job);
     try {
-      const size = await backend.fileSize(path);
-      // Opening a file into a fresh window replaces the empty "Untitled" tab.
-      const cur = activeTab();
-      const replaceId = cur && isPristine(cur) ? cur.id : undefined;
-      if (size > LARGE_FILE_BYTES) {
-        // Big file: the tab appears at once and shows progress while the text streams in.
-        const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path), loading: { loaded: 0, total: size } });
-        store().addTab(tab, { replaceId });
-        void loadFileInto(tab.id, path);
-        continue;
-      }
-      const file = await backend.readFile(path);
-      const fields = fromFile(file);
-      const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path, fields.content), ...fields });
-      if (tab.language === "markdown" && fields.content.length > MD_FORMATTED_MAX) tab.mdSource = true;
-      store().addTab(tab, { replaceId });
-      reportEncoding(file, tab.title);
-    } catch (e) {
-      store().notify(`Could not open ${fileName(path)}: ${e}`, "error");
+      await job;
+    } finally {
+      if (opening.get(path) === job) opening.delete(path);
     }
+  }
+}
+
+/** Makes a preview tab a normal one. */
+export const keepTab = (id: string) => store().update(id, { preview: undefined });
+
+async function openOne(path: string, opts: OpenOptions) {
+  const existing = store().tabs.find((t) => t.path === path);
+  if (existing) {
+    store().setActive(existing.id);
+    if (opts.pin && existing.preview) keepTab(existing.id);
+    return;
+  }
+  try {
+    const size = await backend.fileSize(path);
+    const cur = activeTab();
+    // A new preview replaces the current one (if it is still unchanged); otherwise opening a file into a fresh
+    // window replaces the empty "Untitled" tab.
+    const oldPreview = opts.preview ? store().tabs.find((t) => t.preview && !t.dirty) : undefined;
+    const replaceId = oldPreview?.id ?? (cur && isPristine(cur) ? cur.id : undefined);
+    const preview = opts.preview && !opts.pin ? true : undefined;
+    if (size > LARGE_FILE_BYTES) {
+      // Big file: the tab appears at once and shows progress while the text streams in.
+      const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path), loading: { loaded: 0, total: size }, preview });
+      store().addTab(tab, { replaceId });
+      void loadFileInto(tab.id, path);
+      return;
+    }
+    const file = await backend.readFile(path);
+    const fields = fromFile(file);
+    const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path, fields.content), ...fields, preview });
+    if (tab.language === "markdown" && fields.content.length > MD_FORMATTED_MAX) tab.mdSource = true;
+    store().addTab(tab, { replaceId });
+    reportEncoding(file, tab.title);
+  } catch (e) {
+    store().notify(`Could not open ${fileName(path)}: ${e}`, "error");
   }
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Menu } from "@tauri-apps/api/menu";
-import { closeOtherTabs, closeTab, encodingMenuItems, newTab, saveTab, setLanguage } from "../actions";
+import { closeOtherTabs, closeTab, encodingMenuItems, keepTab, newTab, saveTab, setLanguage } from "../actions";
 import { LANGUAGE_LIST } from "../editors/languages";
 import { useTabs, type Tab } from "./store";
 import { useGit } from "../git/store";
@@ -197,9 +197,10 @@ export function TabBar() {
       data-tab-id={tab.id}
       role="tab"
       aria-selected={tab.id === activeId}
-      title={mark ? `${tab.path}\n${markText}` : (tab.path ?? tab.title)}
-      className={`tab${mark ? " in-git" : ""}${tab.id === activeId ? " active" : ""}${splitId && tab.id !== activeId && (tab.id === mainId || tab.id === splitId) ? " in-split" : ""}${tab.dirty ? " dirty" : ""}`}
+      title={`${tab.path ?? tab.title}${tab.preview ? "\nPreview: double-click to keep it open" : ""}${mark ? `\n${markText}` : ""}`}
+      className={`tab${tab.preview ? " preview" : ""}${mark ? " in-git" : ""}${tab.id === activeId ? " active" : ""}${splitId && tab.id !== activeId && (tab.id === mainId || tab.id === splitId) ? " in-split" : ""}${tab.dirty ? " dirty" : ""}`}
       onPointerDown={(e) => onPointerDown(e, tab)}
+      onDoubleClick={() => tab.preview && keepTab(tab.id)}
       onAuxClick={(e) => {
         if (e.button === 1) {
           e.preventDefault();

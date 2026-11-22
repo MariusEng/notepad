@@ -25,6 +25,7 @@ interface SessionTab {
   mtime: number | null;
   mdSource: boolean;
   dataView?: boolean;
+  preview?: boolean;
   cursor: number;
   scroll: number;
   /** Text is stored in buffers/<id>.txt. */
@@ -86,6 +87,7 @@ async function writeSession() {
       mtime: t.mtime,
       mdSource: t.mdSource,
       dataView: t.dataView || undefined,
+      preview: t.preview || undefined,
       cursor: t.cursor,
       scroll: t.scroll,
       buffered: keep.includes(t.id),

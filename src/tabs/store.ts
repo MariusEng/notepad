@@ -24,6 +24,9 @@ export interface Tab {
   mdSource: boolean;
   /** JSON and XML tabs: show the tree view instead of the source (⌘/). */
   dataView?: boolean;
+  /** Opened with a single click in the sidebar: the next single-clicked file replaces it. Editing the file or
+   *  double-clicking it (in the sidebar or the tab bar) keeps it open (clears this). Title shown in italics. */
+  preview?: boolean;
   cursor: number;
   scroll: number;
   /** Set when the file changed or vanished on disk while open. */
@@ -184,11 +187,15 @@ export const useTabs = create<TabState>((set, get) => ({
   setSplitRatio: (r) => set({ splitRatio: Math.min(0.8, Math.max(0.2, r)) }),
 
   update: (id, patch) =>
-    set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+    set((s) => ({
+      // Any unsaved change (line endings, encoding, big-file edits…) keeps a preview tab open, like typing does.
+      tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...patch, ...(patch.dirty ? { preview: undefined } : {}) } : t)),
+    })),
 
   edit: (id, content) =>
     set((s) => ({
-      tabs: s.tabs.map((t) => (t.id === id && t.content !== content ? { ...t, content, dirty: true } : t)),
+      // An edited preview tab becomes a normal one.
+      tabs: s.tabs.map((t) => (t.id === id && t.content !== content ? { ...t, content, dirty: true, preview: undefined } : t)),
     })),
 
   replaceContent: (id, content, patch = {}) =>

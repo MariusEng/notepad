@@ -126,6 +126,10 @@ body.tab-dragging * {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Preview tab (single click in the sidebar): replaced by the next one until kept. */
+.tab.preview .tab-title {
+  font-style: italic;
+}
 
 .tab-close {
   display: grid;

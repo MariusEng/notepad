@@ -15,6 +15,9 @@ Every shortcut in Notepad. On macOS, ⌘ is Command, ⌥ is Option, ⇧ is Shift
 | Save As (choose the type first) | ⇧⌘S | Ctrl+Shift+S |
 | Close tab | ⌘W | Ctrl+W |
 | Close tab (mouse) | Middle-click the tab | Middle-click the tab |
+| Preview a file from the sidebar (replaced by the next one) | Click | Click |
+| Open a file from the sidebar and keep it open | Double-click | Double-click |
+| Keep a preview tab open | Double-click the tab | Double-click the tab |
 | Next / previous tab | ⌃Tab / ⌃⇧Tab | Ctrl+Tab / Ctrl+Shift+Tab |
 | Next / previous tab (also) | ⇧⌘] / ⇧⌘[, ⌥⌘→ / ⌥⌘← | Ctrl+PgDn / Ctrl+PgUp, Ctrl+Shift+] / Ctrl+Shift+[, Ctrl+Alt+→ / Ctrl+Alt+← |
 | Go to tab 1–8 / last tab | ⌘1–⌘8 / ⌘9 | Ctrl+1–Ctrl+8 / Ctrl+9 |

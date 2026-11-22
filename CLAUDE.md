@@ -152,6 +152,11 @@ the features, shortcuts and file layout.
 - Mac runner jobs (0.13.1): job-level CARGO_TARGET_DIR=/Users/forgejo-runner/.cache/notepad-ci/target-{macos,windows}
   (a job's workdir is new every run, so src-tauri/target never persisted); bundles are copied from there.
 
+- Preview tabs (0.14.0, user request): sidebar single click → `openFiles([p], {preview:true})` replaces the existing
+  clean preview tab (`tab.preview`, italic); double click → `{pin:true}`; tab-bar double-click → `keepTab`. Store
+  `edit`/`update` with `dirty` clear `preview`. `opening` map in actions.ts serialises opens of the same path so the
+  clicks of a double click never open a file twice. Other ways of opening (File → Open, drop, Finder) are normal tabs.
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -186,8 +191,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.13.3)
-Latest (0.13.3): Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
+## Status (2026-11-22, version 0.14.0)
+Latest (0.14.0): preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
+(local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
 git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and

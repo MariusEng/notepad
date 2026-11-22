@@ -56,7 +56,8 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
 - **Sidebar with a folder browser** (File → Open Folder…, ⌥⌘O): any folder, shown under the repository when
   one is open (drag the line between them to resize). Right-click in either tree → **New File…** / **New Folder…**
-  (inline name field; new files open in a tab) and **Move to Trash…** (asks first; in the open repository the
+  (inline name field; new files open in a tab). A single click on a file opens a **preview tab** (italic title)
+  that the next click replaces; a double click (or editing it, or double-clicking the tab) keeps it open and **Move to Trash…** (asks first; in the open repository the
   deletion is committed and pushed).
 - **Git mark on tabs**: files inside a git repository (not ignored) get an orange git mark in the tab bar, so
   it's obvious which files are committed and pushed and shouldn't hold secrets. The tooltip names the repository.

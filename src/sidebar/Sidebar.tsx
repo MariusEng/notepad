@@ -277,7 +277,9 @@ function Node({ rel, entry, depth }: { rel: string; entry: DirEntry; depth: numb
         role="treeitem"
         aria-expanded={entry.isDir ? open : undefined}
         title={rel}
-        onClick={() => (entry.isDir ? setOpen(rel, !open) : void openFiles([full]))}
+        // Files: a single click opens a preview (replaced by the next one), a double click keeps the tab open.
+        onClick={() => (entry.isDir ? setOpen(rel, !open) : void openFiles([full], { preview: true }))}
+        onDoubleClick={() => !entry.isDir && void openFiles([full], { pin: true })}
         onContextMenu={(e) => {
           e.preventDefault();
           void entryMenu(root, rel, entry, setCreating);
