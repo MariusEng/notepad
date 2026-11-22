@@ -1,5 +1,6 @@
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import helpText from "./help.md?raw";
+import shortcutsText from "../SHORTCUTS.md?raw";
 import { LARGE_FILE_BYTES, backend, type FileData } from "./lib/backend";
 import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
@@ -310,11 +311,15 @@ export async function formatActive() {
 }
 
 /** Help → Notepad Help: the help text in its own tab (focused if it is already open). */
-export function openHelp() {
-  const title = "Notepad Help.md";
+export const openHelp = () => openDoc("Notepad Help.md", helpText);
+
+/** Help → Keyboard Shortcuts: SHORTCUTS.md (the one list of all shortcuts) in its own tab. */
+export const openShortcuts = () => openDoc("Keyboard Shortcuts.md", shortcutsText);
+
+function openDoc(title: string, content: string) {
   const open = store().tabs.find((t) => t.path === null && t.title === title);
   if (open) return store().setActive(open.id);
-  store().addTab(baseTab({ title, language: "markdown", content: helpText }));
+  store().addTab(baseTab({ title, language: "markdown", content }));
 }
 
 // ---------------------------------------------------------------- encodings

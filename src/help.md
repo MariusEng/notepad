@@ -1,5 +1,7 @@
 # Notepad Help
 
+All keyboard shortcuts are listed under **Help → Keyboard Shortcuts**.
+
 A minimal notepad. Markdown is the default: you edit formatted text and the file on disk stays plain `.md`.
 
 ## Documents and tabs

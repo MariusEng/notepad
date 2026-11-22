@@ -82,27 +82,8 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 
 ## Keyboard shortcuts
 
-| Action | macOS | Windows / Linux |
-|---|---|---|
-| New Markdown document | ⌘N | Ctrl+N |
-| New file of a chosen type | ⇧⌘N | Ctrl+Shift+N |
-| Open / Save / Save As | ⌘O / ⌘S / ⇧⌘S | Ctrl+O / Ctrl+S / Ctrl+Shift+S |
-| Close tab | ⌘W | Ctrl+W |
-| Next / previous tab | Ctrl+Tab / Ctrl+Shift+Tab, ⇧⌘] / ⇧⌘[ | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PgDn / Ctrl+PgUp |
-| Go to tab 1–8 / last tab | ⌘1–⌘8 / ⌘9 | Ctrl+1–Ctrl+8 / Ctrl+9 |
-| Find | ⌘F | Ctrl+F |
-| Format Document | ⇧⌥F | Shift+Alt+F |
-| Toggle source (Markdown, HTML) | ⌘/ | Ctrl+/ |
-| Open folder | ⌥⌘O | Ctrl+Alt+O |
-| Show/hide sidebar | ⇧⌘E | Ctrl+Shift+E |
-| Find and replace | ⌥⌘F | Ctrl+H |
-| Find next / previous | ⌘G / ⇧⌘G | F3 / Shift+F3 |
-| Select CSV/log column | Ctrl+Space | Ctrl+Space |
-| Column selection (mouse) | Option+drag | Alt+drag |
-| Column selection (keyboard) | ⇧⌥⌘+arrows | Shift+Alt+arrows, Ctrl+Shift+Alt+arrows |
-| Add cursor above/below | ⌥⌘↑ / ⌥⌘↓ | Ctrl+Alt+↑ / ↓ |
-
-⌘Tab is not used because macOS reserves it for switching apps, and the app never receives it.
+All shortcuts, for macOS and Windows/Linux, are in **[SHORTCUTS.md](SHORTCUTS.md)**, also in the app under
+**Help → Keyboard Shortcuts**. Keep that file up to date when a shortcut is added or changed.
 
 ## Development
 

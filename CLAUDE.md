@@ -30,6 +30,8 @@ the features, shortcuts and file layout.
   whole column, several columns, or part of a column (selected lines); one range per line, capped at 200k lines.
 - Save As… shows the type picker first (TypePicker `saveAs` mode), then the native dialog: macOS's save panel
   (rfd) has no file-type popup. HTML status bar button names the action: "Preview" in source, "Source" in preview.
+- Help → Keyboard Shortcuts opens `SHORTCUTS.md` (repo root, the ONE complete list for macOS and Windows/Linux; the
+  README links to it). Update it whenever a shortcut is added or changed.
 - Help → Notepad Help (`src/help.md`, opens in a tab) and an About dialog listing open source components and that
   the app is built with Claude. Keep both up to date when features or dependencies change.
 - Hot exit: closing the app never prompts; tabs and unsaved edits are restored on launch.
@@ -184,8 +186,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.13.2)
-Latest (0.13.2): macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
+## Status (2026-11-22, version 0.13.3)
+Latest (0.13.3): Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
 git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and

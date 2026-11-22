@@ -509,7 +509,12 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         ],
     )?;
 
-    let help = Submenu::with_items(app, "Help", true, &[&item("help", "Notepad Help", None)?])?;
+    let help = Submenu::with_items(
+        app,
+        "Help",
+        true,
+        &[&item("help", "Notepad Help", None)?, &item("shortcuts", "Keyboard Shortcuts", None)?],
+    )?;
     #[cfg(not(target_os = "macos"))]
     {
         help.append(&PredefinedMenuItem::separator(app)?)?;
