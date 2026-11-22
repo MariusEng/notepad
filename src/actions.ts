@@ -3,7 +3,7 @@ import helpText from "./help.md?raw";
 import { LARGE_FILE_BYTES, backend, type FileData } from "./lib/backend";
 import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
-import { LANGUAGES, LANGUAGE_LIST, detectLanguage, fileName, hasRenderedView, type LanguageId } from "./editors/languages";
+import { LANGUAGES, LANGUAGE_LIST, detectLanguage, fileName, hasDataView, hasRenderedView, type LanguageId } from "./editors/languages";
 import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
 import { ensureLoaded } from "./tabs/unload";
 
@@ -280,11 +280,13 @@ export async function toggleEol(id: string) {
   if (tab) store().update(id, { eol: tab.eol === "\n" ? "\r\n" : "\n", dirty: true });
 }
 
-/** Markdown: formatted editor ⇄ source. HTML: preview ⇄ source. (⌘/ · Ctrl+/) */
+/** Markdown: formatted editor ⇄ source. HTML: preview ⇄ source. JSON, XML: source ⇄ tree view. (⌘/ · Ctrl+/) */
 export function toggleSource(id = store().activeId) {
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (tab && hasRenderedView(tab.language)) store().update(tab.id, { mdSource: !tab.mdSource, scroll: 0 });
+  if (!tab) return;
+  if (hasRenderedView(tab.language)) store().update(tab.id, { mdSource: !tab.mdSource, scroll: 0 });
+  else if (hasDataView(tab.language)) store().update(tab.id, { dataView: !tab.dataView });
 }
 
 /** Format Document (⇧⌥F). In code editors it is a single undoable edit. */

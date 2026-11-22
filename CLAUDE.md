@@ -12,7 +12,7 @@ the features, shortcuts and file layout.
   the code editor, so the block drag handle is hidden.
 - Cmd+N creates a new `.md` tab; Cmd+Shift+N (`TypePicker.tsx`) asks for the type first. Right-click on a
   tab → File Type changes it (untitled tabs also get the new extension). Files are saved as real Markdown, never as rich text.
-- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown,
+- Highlighting and formatting for: txt, PowerShell, Perl, sh, cmd/bat, INI, YAML, JSON, XML, SQL (ANSI, PostgreSQL, T-SQL), Markdown,
   JavaScript, HTML (preview ⇄ source with ⌘/, like Markdown), CSV and log (each column keeps its own colour).
 - Really large files: never freeze; stream in with progress in the tab. Tabs can be dragged; split-view pairs stay
   together. Git supports branches (repos that refuse pushes to main/master). The repo sidebar can be hidden.
@@ -138,6 +138,15 @@ the features, shortcuts and file layout.
   → message, exit 0. Default `international=false` (downloads only from Norway).
   The user chose NOT to code-sign or notarise macOS (no Apple Developer account); builds are ad-hoc/linker-signed.
 
+- JSON/XML (0.13.0): `editors/languages/validate.ts` = pure checkers (`checkJson(text, build)` also builds the tree
+  with exact number text; `validateXml` = well-formedness: matching tags, quoting, entities, one root…), used by
+  the CodeMirror linter (`LanguageInfo.validate`, CodeEditor), the status bar (`editors/validation.ts` store,
+  `revealProblem`) and the formatters (errors with line/column). Engines' JSON.parse messages differ (JSC has no
+  position), so never rely on them. formatJson prints from the tree (no JSON.parse rounding); JSONC with comments
+  → Prettier "json" parser (keeps comments). XML format = @prettier/plugin-xml, whitespace "preserve" ("ignore"
+  rewraps text values). Tree view = `editors/DataView.tsx`, `tab.dataView` (⌘/ for JSON/XML), XML via DOMParser.
+  Gotcha: the Bash tool turns `\uXXXX` in commands into the character; write such escapes from parts.
+
 ## Gotchas found so far
 - Windows Credential Manager: max 2560 bytes per entry (keyring stores UTF-16 → 1280 units). creds.rs splits a
   longer secret (OAuth access + refresh token) into `host#1..N` entries with `parts:N` in the main entry; short
@@ -167,8 +176,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.12.6)
-Latest (0.12.6): Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
+## Status (2026-11-22, version 0.13.0)
+Latest (0.13.0): XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
+Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
 git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and
 Ctrl+N / Ctrl+Shift+N work. 0.12.5: Windows job moved to the Mac runner servai (cross-compile with Homebrew nsis/llvm/lld + cargo-xwin;
 servai built macOS in 1.5 min vs ~10 min per job on `server`). 0.12.4: macos job installs rustup for the runner user (`forgejo-runner` on servai had no cargo). 0.12.3: macOS built by CI on a Mac runner; release waits for all three. 0.12.2: releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on

@@ -1,5 +1,6 @@
 import type { Extension } from "@codemirror/state";
 import { StreamLanguage } from "@codemirror/language";
+import type { Problem } from "./validate";
 
 export type LanguageId =
   | "markdown"
@@ -15,6 +16,7 @@ export type LanguageId =
   | "ini"
   | "yaml"
   | "json"
+  | "xml"
   | "sql"
   | "pgsql"
   | "tsql";
@@ -28,6 +30,8 @@ export interface LanguageInfo {
   wrap: boolean;
   /** The editor extension; `doc` is the text it opens with (CSV and logs look at it to find their columns). */
   load: (doc: string) => Promise<Extension>;
+  /** Syntax check shown in the editor and the status bar (JSON, XML). */
+  validate?: () => Promise<(text: string) => Problem[]>;
 }
 
 const legacy = async <T>(p: Promise<T>, pick: (m: T) => any) => StreamLanguage.define(pick(await p));
@@ -123,6 +127,18 @@ export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
     extensions: ["json", "jsonc", "json5"],
     wrap: false,
     load: async () => (await import("@codemirror/lang-json")).json(),
+    validate: async () => (await import("./validate")).validateJson,
+  },
+  xml: {
+    id: "xml",
+    label: "XML",
+    extensions: [
+      "xml", "xsd", "xsl", "xslt", "svg", "plist", "rss", "atom", "wsdl", "xaml", "resx", "config", "manifest",
+      "csproj", "vbproj", "fsproj", "vcxproj", "props", "targets", "nuspec", "kml", "gpx", "xliff", "xlf", "dtd",
+    ],
+    wrap: false,
+    load: async () => (await import("@codemirror/lang-xml")).xml(),
+    validate: async () => (await import("./validate")).validateXml,
   },
   sql: {
     id: "sql",
@@ -158,6 +174,9 @@ export const LANGUAGES: Record<LanguageId, LanguageInfo> = {
 
 /** Languages with a rendered view (Markdown: formatted editor, HTML: preview) next to the source. */
 export const hasRenderedView = (id: LanguageId) => id === "markdown" || id === "html";
+
+/** Languages with a tree view (`tab.dataView`) next to the source. */
+export const hasDataView = (id: LanguageId) => id === "json" || id === "xml";
 
 export const LANGUAGE_LIST = Object.values(LANGUAGES);
 
@@ -211,6 +230,9 @@ export function detectLanguage(path: string, content = ""): LanguageId {
   if (name === ".env" || name.startsWith(".env.")) return "ini";
   if (/\.log\.\d+$|\.log\.\d{4}-\d\d-\d\d$|\.log\.(old|bak|gz\.txt)$/.test(name)) return "log"; // rotated logs
   if (name === ".bashrc" || name === ".zshrc" || name === ".profile" || name === ".bash_profile") return "shell";
+  // XML by content: an XML declaration, or a document that starts with a tag and has no known extension.
+  const head = content.slice(0, 200).replace(/^\uFEFF/, "").trimStart();
+  if (head.startsWith("<?xml")) return "xml";
   const first = content.slice(0, 200).split("\n", 1)[0];
   if (first.startsWith("#!")) {
     if (/\b(ba|z|k|da)?sh\b/.test(first)) return "shell";

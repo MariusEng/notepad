@@ -22,6 +22,8 @@ export interface Tab {
   mtime: number | null;
   /** Markdown and HTML tabs: show the source instead of the formatted editor / preview. */
   mdSource: boolean;
+  /** JSON and XML tabs: show the tree view instead of the source (⌘/). */
+  dataView?: boolean;
   cursor: number;
   scroll: number;
   /** Set when the file changed or vanished on disk while open. */

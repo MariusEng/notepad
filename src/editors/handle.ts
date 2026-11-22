@@ -48,6 +48,8 @@ export interface EditorHandle {
   replaceAll(text: string): boolean;
   /** Big documents copy their text into the tab store lazily; this does it now. */
   flush?(): void;
+  /** Selects a range and scrolls it into view (code editor only). */
+  select?(from: number, to: number): void;
 }
 
 // One handle per mounted editor (there are two while the view is split).

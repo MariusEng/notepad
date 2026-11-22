@@ -5,6 +5,7 @@ import { useTabs } from "./tabs/store";
 import { useGit } from "./git/store";
 import { showBranchMenu, syncNow, toggleSidebar } from "./git/actions";
 import { useSettings } from "./settings";
+import { revealProblem, useValidation } from "./editors/validation";
 
 /** Branch (click: branch menu) and sync state (click: sync now) of the open repository. */
 function RepoStatus() {
@@ -46,6 +47,36 @@ function SidebarToggle() {
         <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />
       </svg>
     </button>
+  );
+}
+
+/** JSON/XML syntax: "Valid JSON", or the number of errors; click to go to the first problem. */
+function ValidationStatus({ tabId, kind }: { tabId: string; kind: string }) {
+  const v = useValidation((s) => s[tabId]);
+  if (!v) return null;
+  if (v.skipped)
+    return (
+      <span className="sb-item" title="Too big to check while you type">
+        {kind} not checked
+      </span>
+    );
+  const where = v.first ? `Line ${v.first.line}, column ${v.first.col}: ${v.first.message}` : "";
+  if (v.errors)
+    return (
+      <button className="sb-item sb-btn sb-warn" title={`${where}\nClick to go there.`} onClick={() => void revealProblem(tabId)}>
+        {v.errors === 1 ? `Invalid ${kind}` : `${v.errors} errors`}
+      </button>
+    );
+  if (v.warnings)
+    return (
+      <button className="sb-item sb-btn" title={`${where}\nClick to go there.`} onClick={() => void revealProblem(tabId)}>
+        {v.warnings === 1 ? "1 warning" : `${v.warnings} warnings`}
+      </button>
+    );
+  return (
+    <span className="sb-item" title={`The ${kind} is well-formed`}>
+      Valid {kind}
+    </span>
   );
 }
 
@@ -104,6 +135,16 @@ export function StatusBar() {
       {tab.language === "markdown" && (
         <button className="sb-item sb-btn" onClick={() => toggleSource(tab.id)} title="Toggle source (⌘/ · Ctrl+/)">
           {tab.mdSource ? "Source" : "Formatted"}
+        </button>
+      )}
+      {(tab.language === "json" || tab.language === "xml") && <ValidationStatus tabId={tab.id} kind={tab.language === "json" ? "JSON" : "XML"} />}
+      {(tab.language === "json" || tab.language === "xml") && (
+        <button
+          className="sb-item sb-btn"
+          onClick={() => toggleSource(tab.id)}
+          title={tab.dataView ? "Edit the source (⌘/ · Ctrl+/)" : "Tree view: expand and collapse (⌘/ · Ctrl+/)"}
+        >
+          {tab.dataView ? "Source" : "View"}
         </button>
       )}
       {tab.language === "html" && (

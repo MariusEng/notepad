@@ -467,6 +467,113 @@ body.tab-dragging * {
   /* An HTML page without its own background renders like a browser: on white. */
   background: #fff;
 }
+/* ---------- JSON / XML tree view ---------- */
+
+.data-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+.dv-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.dv-kind {
+  font-weight: 600;
+  margin-right: 6px;
+}
+.dv-spacer {
+  flex: 1;
+}
+.dv-btn,
+.dv-more {
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+}
+.dv-btn:hover,
+.dv-more:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.dv-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.dv-tree {
+  padding: 6px 0 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.dv-row {
+  white-space: pre;
+  padding-right: 12px;
+  cursor: text;
+}
+.dv-row.dv-toggle {
+  cursor: default;
+}
+.dv-row.dv-toggle:hover {
+  background: var(--bg-hover);
+}
+.dv-caret {
+  display: inline-block;
+  width: 14px;
+  color: var(--faint);
+  font-size: 10px;
+}
+.dv-key,
+.dv-attr {
+  color: var(--syn-property);
+}
+.dv-index,
+.dv-muted,
+.dv-punct {
+  color: var(--faint);
+}
+.dv-string {
+  color: var(--syn-string);
+}
+.dv-number {
+  color: var(--syn-number);
+}
+.dv-keyword {
+  color: var(--syn-keyword);
+}
+.dv-tag {
+  color: var(--syn-type);
+}
+.dv-text {
+  color: var(--fg);
+}
+.dv-comment {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+.dv-note,
+.dv-error {
+  margin: 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dv-error strong {
+  color: var(--danger);
+}
+
 .pane-divider {
   position: relative;
   background: var(--border);

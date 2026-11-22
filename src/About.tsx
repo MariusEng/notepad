@@ -14,6 +14,7 @@ const COMPONENTS: { name: string; use: string; license: string; url: string }[] 
   { name: "CodeMirror 6 and Lezer", use: "code editor and syntax highlighting", license: "MIT", url: "https://codemirror.net" },
   { name: "Milkdown (Crepe) and ProseMirror", use: "formatted Markdown editor", license: "MIT", url: "https://milkdown.dev" },
   { name: "Prettier", use: "formatting JavaScript, HTML, Markdown and YAML", license: "MIT", url: "https://prettier.io" },
+  { name: "@prettier/plugin-xml", use: "formatting XML", license: "MIT", url: "https://github.com/prettier/plugin-xml" },
   { name: "sql-formatter", use: "formatting SQL", license: "MIT", url: "https://github.com/sql-formatter-org/sql-formatter" },
   { name: "Zustand", use: "app state", license: "MIT", url: "https://github.com/pmndrs/zustand" },
   { name: "libgit2 and git2-rs", use: "git repositories", license: "GPL-2.0 with linking exception / MIT, Apache-2.0", url: "https://libgit2.org" },

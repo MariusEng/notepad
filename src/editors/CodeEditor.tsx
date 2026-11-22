@@ -18,6 +18,7 @@ import { selectColumn } from "./languages/columns";
 import { LANGUAGES } from "./languages";
 import { cmHighlight, cmTheme } from "./cmTheme";
 import { registerEditor } from "./handle";
+import { setValidation } from "./validation";
 import { columnSelection } from "./blockSelect";
 import { useTabs, type Tab } from "../tabs/store";
 
@@ -36,6 +37,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     const { edit, update, setStatus } = useTabs.getState();
     const lang = LANGUAGES[tab.language];
     const language = new Compartment();
+    const lint = new Compartment();
     let scrollTimer: ReturnType<typeof setTimeout> | undefined;
     // Copying a big document into the store on every keystroke would be slow; do it when typing pauses
     // (and whenever something needs the text: see flushEdits).
@@ -84,6 +86,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         cmTheme,
         cmHighlight,
         language.of([]),
+        lint.of([]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged) {
             if (!large) edit(tab.id, u.state.doc.toString());
@@ -131,6 +134,39 @@ export function CodeEditor({ tab }: { tab: Tab }) {
     lang.load(tab.content).then((ext) => {
       if (!cancelled) view.dispatch({ effects: language.reconfigure(ext) });
     });
+    // JSON and XML: syntax check while typing (underlined, a marker in the gutter, the status bar).
+    if (lang.validate) {
+      Promise.all([lang.validate(), import("@codemirror/lint")]).then(([check, { linter, lintGutter }]) => {
+        if (cancelled) return;
+        const MAX = 30_000_000;
+        const source = linter(
+          (v) => {
+            const text = v.state.doc.toString();
+            if (text.length > MAX) {
+              setValidation(tab.id, { errors: 0, warnings: 0, first: null, skipped: true });
+              return [];
+            }
+            const problems = check(text);
+            const first = problems.find((p) => p.severity === "error") ?? problems[0] ?? null;
+            const pos = first ? v.state.doc.lineAt(Math.min(first.from, v.state.doc.length)) : null;
+            setValidation(tab.id, {
+              errors: problems.filter((p) => p.severity === "error").length,
+              warnings: problems.filter((p) => p.severity === "warning").length,
+              first: first && pos ? { ...first, line: pos.number, col: first.from - pos.from + 1 } : null,
+            });
+            const len = v.state.doc.length;
+            return problems.map((p) => ({
+              from: Math.min(p.from, len),
+              to: Math.min(Math.max(p.to, p.from), len),
+              severity: p.severity,
+              message: p.message,
+            }));
+          },
+          { delay: tab.content.length > 5_000_000 ? 1500 : 400 },
+        );
+        view.dispatch({ effects: lint.reconfigure([source, lintGutter()]) });
+      });
+    }
 
     const unregister = registerEditor(tab.id, {
       flush,
@@ -139,6 +175,14 @@ export function CodeEditor({ tab }: { tab: Tab }) {
       findNext: (dir) => findStep(view, dir),
       useSelectionForFind: () => useSelectionForFind(view),
       selectColumn: () => selectColumnNotify(view),
+      select: (from, to) => {
+        const len = view.state.doc.length;
+        view.dispatch({
+          selection: EditorSelection.range(Math.min(from, len), Math.min(to, len)),
+          scrollIntoView: true,
+        });
+        view.focus();
+      },
       replaceAll: (text) => {
         view.dispatch({
           changes: { from: 0, to: view.state.doc.length, insert: text },

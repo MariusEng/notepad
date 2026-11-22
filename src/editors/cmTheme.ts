@@ -49,6 +49,10 @@ export const cmTheme = EditorView.theme({
     padding: "3px 8px",
   },
   ".cm-panel.cm-search label": { fontSize: "13px", color: "var(--muted)" },
+  // JSON/XML syntax problems (the underline and gutter marker come from @codemirror/lint).
+  ".cm-diagnostic": { fontFamily: "var(--font-ui)", fontSize: "13px", padding: "4px 8px 4px 10px" },
+  ".cm-diagnostic-error": { borderLeftColor: "var(--danger)" },
+  ".cm-diagnostic-warning": { borderLeftColor: "var(--log-warn)" },
   ".cm-tooltip": {
     backgroundColor: "var(--bg-subtle)",
     color: "var(--fg)",

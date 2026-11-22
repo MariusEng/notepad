@@ -14,7 +14,7 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   it is greyed out for non-Markdown files and in the Markdown source view.
   **⌘/** (Ctrl+/) toggles the raw Markdown source.
 - **HTML** opens in a sandboxed preview (no scripts); **⌘/** switches to the source and back.
-- **Syntax highlighting** for JavaScript, HTML, PowerShell, Perl, shell, batch (`.bat`/`.cmd`), INI, YAML, JSON,
+- **Syntax highlighting** for JavaScript, HTML, PowerShell, Perl, shell, batch (`.bat`/`.cmd`), INI, YAML, JSON, XML,
   SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. For `.sql` files the dialect is guessed
   from the content (e.g. `GO`, `@vars`, `[brackets]` → T-SQL; `$$`, `::`, `RETURNING` → PostgreSQL)
   and can be changed in the status bar. The language comes from the file extension or shebang, and can be changed
@@ -35,7 +35,10 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   Korean, UTF-16. Characters an encoding can't hold are refused on save, never silently replaced.
 - **Big files** (over 4 MB) stream in with a progress bar in the tab, so the app never freezes; up to 512 MB.
   Big Markdown files (over 1 MB) open in the source view.
-- **Format Document** (⇧⌥F / Shift+Alt+F): JavaScript, HTML, JSON, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
+- **JSON and XML validation** while typing (underline, gutter marker, status bar "Valid JSON" / error count, click to
+  jump) and a **tree view** (status bar **View**, or ⌘/) with expand/collapse. Pure-TS checkers in
+  `editors/languages/validate.ts` give exact line/column on every platform.
+- **Format Document** (⇧⌥F / Shift+Alt+F): JavaScript, HTML, JSON, XML, YAML, Markdown, INI and SQL are built in. Shell, Perl and PowerShell
   use external tools if they are installed:
   - shell: `brew install shfmt`
   - Perl: `brew install perltidy`

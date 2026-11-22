@@ -22,8 +22,10 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 
 ## Code
 
-- Highlighting for JavaScript, HTML, CSV, log files, PowerShell, Perl, shell, batch (cmd/bat), INI, YAML, JSON, SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. Change the language in the status bar.
-- **Format Document**: **⇧⌥F** (Shift+Alt+F). JavaScript, HTML, JSON, YAML, Markdown, INI and SQL are built in; shell, Perl and PowerShell use `shfmt`, `perltidy` and `PSScriptAnalyzer` when they are installed.
+- Highlighting for JavaScript, HTML, CSV, log files, PowerShell, Perl, shell, batch (cmd/bat), INI, YAML, JSON, XML, SQL (ANSI, PostgreSQL, T-SQL), Markdown and plain text. Change the language in the status bar.
+- **Format Document**: **⇧⌥F** (Shift+Alt+F). JavaScript, HTML, JSON, XML, YAML, Markdown, INI and SQL are built in (JSON keeps every digit of big numbers and any comments); shell, Perl and PowerShell use `shfmt`, `perltidy` and `PSScriptAnalyzer` when they are installed.
+- **JSON and XML are checked while you type**: mistakes are underlined with a marker in the margin (hover for the explanation), and the status bar says *Valid JSON* / *Valid XML* or how many errors there are. Click it to jump to the first one. JSON with comments or trailing commas (like `tsconfig.json`) gets warnings, not errors.
+- **Tree view for JSON and XML**: click **View** in the status bar (or press ⌘/ · Ctrl+/) to see the document as a tree you can expand and collapse; **Source** goes back to editing. Big lists show 200 entries at a time.
 - **Save As…** (⇧⌘S · Ctrl+Shift+S) asks for the file type first (Enter keeps the current one), then where to save. Typing another known extension in the save dialog also works.
 
 ## Find and replace

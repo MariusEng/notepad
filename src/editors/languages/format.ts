@@ -1,6 +1,6 @@
 import { backend } from "../../lib/backend";
 import type { LanguageId } from ".";
-import { FormatError, formatIni, formatSql, formatJson, formatMarkdown, formatYaml, formatJavaScript, formatHtml, tidyWhitespace } from "./formatters";
+import { FormatError, formatIni, formatSql, formatJson, formatMarkdown, formatYaml, formatJavaScript, formatHtml, formatXml, tidyWhitespace } from "./formatters";
 
 export { FormatError };
 
@@ -17,6 +17,8 @@ export async function formatText(language: LanguageId, text: string): Promise<st
       return formatJavaScript(text);
     case "html":
       return formatHtml(text);
+    case "xml":
+      return formatXml(text);
     case "ini":
       return formatIni(text);
     case "shell":
