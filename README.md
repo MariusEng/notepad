@@ -114,6 +114,17 @@ npm run typecheck
 cd src-tauri && cargo test
 ```
 
+### Releases
+
+- **Linux and Windows**: `.forgejo/workflows/release.yml` runs on a Forgejo runner with the `docker` label. Push a
+  tag (`git tag v0.11.1 && git push origin v0.11.1`) and it builds `.deb`, `.rpm`, `.AppImage` and a Windows NSIS
+  installer (cross-compiled on Linux with cargo-xwin), and attaches them to the release for that tag. Actions →
+  release → *Run workflow* builds without a release (download the files from the run's artifacts).
+- **macOS** is built on a Mac: `npx tauri build --bundles app,dmg`, then attach the `.dmg` to the same release:
+  `FORGEJO_TOKEN=… scripts/forgejo-release.sh v0.11.1 src-tauri/target/release/bundle/dmg/*.dmg`.
+- Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
+  → *More info* → *Run anyway*.
+
 ### Layout
 
 ```
@@ -137,6 +148,8 @@ src/
   editors/encodings.ts     encodings offered in File → Encoding
   About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following
+.forgejo/workflows/    release builds for Linux and Windows (Forgejo Actions)
+scripts/forgejo-release.sh  attach files to the Forgejo release of a tag
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
 src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"
 src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone
