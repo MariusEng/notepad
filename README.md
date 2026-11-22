@@ -116,8 +116,9 @@ cd src-tauri && cargo test
 
 ### Releases
 
-- **Automatic releases**: every push to `main` builds `.deb`, `.rpm`, `.AppImage` and a Windows NSIS installer
-  (cross-compiled on Linux with cargo-xwin) on a Forgejo runner with the `docker` label
+- **Automatic releases**: every push to `main` builds `.deb`, `.rpm` and `.AppImage` on a Forgejo runner with the
+  `docker` label, and the macOS `.dmg` plus the Windows NSIS installer (cross-compiled with cargo-xwin) on a Mac
+  runner with the `macos` label
   (`.forgejo/workflows/release.yml`). When both builds are green and the version in `package.json` has no release
   yet, it publishes release `v<version>` with the installers and the commit titles since the last release. So:
   bump the version → push → release. Pushing a `v*` tag by hand also works; Actions → release → *Run workflow*

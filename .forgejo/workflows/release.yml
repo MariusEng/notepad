@@ -1,4 +1,5 @@
-# Builds Notepad for Linux and Windows on a Linux runner (Docker), and publishes a release when both are green.
+# Builds Notepad for Linux (Docker runner) and for macOS and Windows (Mac runner), and publishes a release when all
+# three are green.
 #
 #  - Every push to main builds both. If both succeed and there is no release yet for the version in package.json,
 #    the `release` job creates release v<version> (tagging the built commit) with the installers attached and the
@@ -16,7 +17,7 @@
 # Forgejo has no API for job logs.
 #
 # The runner needs the `docker` label (forgejo-runner's default). Change `runs-on` if yours is labelled otherwise.
-# The Windows installer is cross-compiled on Linux (cargo-xwin + NSIS), which Tauri calls experimental; it is
+# The Windows installer is cross-compiled on the Mac (cargo-xwin + NSIS), which Tauri calls experimental; it is
 # unsigned, so Windows SmartScreen will warn ("More info" → "Run anyway").
 name: release
 
@@ -87,38 +88,43 @@ jobs:
           FORGEJO_REPO: ${{ github.repository }}
         run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-linux-${{ job.status }}.log"
 
+  # Cross-compiled on the Mac runner (host mode): Rust's Windows target + cargo-xwin (Microsoft's SDK headers,
+  # downloaded once), Homebrew's llvm + lld for clang-cl/lld-link, NSIS for the installer. What the job installs stays on the Mac.
   windows:
-    runs-on: docker
-    container:
-      # Trixie: its NSIS (3.11) has Win\RestartManager.nsh, which Tauri's installer script needs (bookworm's 3.08 doesn't).
-      image: node:20-trixie
+    runs-on: macos
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
 
-      - name: System packages
+      - name: Tools
         run: |
-          exec > >(tee -a /tmp/ci.log) 2>&1
-          apt-get update
-          apt-get install -y --no-install-recommends build-essential curl perl nsis lld llvm clang python3
-          makensis -VERSION
-
-      - name: Rust and cargo-xwin
-        run: |
-          exec > >(tee -a /tmp/ci.log) 2>&1
-          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --target x86_64-pc-windows-msvc
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-          "$HOME/.cargo/bin/cargo" install --locked cargo-xwin
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
+          : > ci.log
+          exec > >(tee -a ci.log) 2>&1
+          b="$(brew --prefix)"
+          if ! command -v makensis >/dev/null || [ ! -x "$b/opt/llvm/bin/clang-cl" ] || [ ! -x "$b/opt/lld/bin/lld-link" ]; then
+            brew install nsis llvm lld || {
+              echo "Couldn't install NSIS/LLVM/LLD as $(whoami). Run once as an admin on the Mac: brew install nsis llvm lld"
+              exit 1
+            }
+          fi
+          command -v cargo >/dev/null || curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          rustup target add x86_64-pc-windows-msvc
+          command -v cargo-xwin >/dev/null || cargo install --locked cargo-xwin
+          makensis -VERSION; cargo --version; cargo xwin --version
 
       - name: Build (NSIS installer)
         run: |
-          exec > >(tee -a /tmp/ci.log) 2>&1
+          b="$(/opt/homebrew/bin/brew --prefix)"
+          export PATH="$b/opt/llvm/bin:$b/opt/lld/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
+          exec > >(tee -a ci.log) 2>&1
+          rm -rf src-tauri/target/x86_64-pc-windows-msvc/release/bundle
           npm ci
           npx tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
 
       - name: Collect
         run: |
-          exec > >(tee -a /tmp/ci.log) 2>&1
-          mkdir -p out
+          exec > >(tee -a ci.log) 2>&1
+          rm -rf out && mkdir -p out
           cp src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe out/
           ls -la out
 
@@ -133,17 +139,15 @@ jobs:
           FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORGEJO_URL: ${{ github.server_url }}
           FORGEJO_REPO: ${{ github.repository }}
-        run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
+        run: scripts/ci-log.sh upload ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
 
   # On the Mac runner itself (host mode, no container): register it with the label `macos:host`. It needs Xcode's
-  # command line tools and Node 20+; Rust is installed for the runner's user on the first run if it is missing. The checkout and target/ stay between runs, so
-  # builds after the first are incremental.
+  # command line tools and Node 20+; Rust is installed for the runner's user on the first run if it is missing.
   macos:
     runs-on: macos
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
         with:
-          clean: false # keep src-tauri/target for incremental builds
 
       - name: Build
         run: |

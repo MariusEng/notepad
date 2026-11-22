@@ -124,7 +124,7 @@ the features, shortcuts and file layout.
   since the previous v* tag). After it is green run `scripts/release-mac.sh` on the Mac to add the .dmg.
   Build jobs: both on a Linux `docker` runner
   in `node:20-bookworm`: Linux deb/rpm/AppImage, Windows NSIS cross-compiled with cargo-xwin (experimental in
-  Tauri). Runner `server` (labels docker, ubuntu-latest) exists. Run #1: Linux OK (~11 min); Windows compiled but
+  Tauri), since 0.12.5 on servai (macos label, host mode) instead of the Linux runner. Runner `server` (labels docker, ubuntu-latest) exists. Run #1: Linux OK (~11 min); Windows compiled but
   makensis failed on bookworm (NSIS 3.08 lacks Win\RestartManager.nsh) → Windows job uses node:20-trixie (NSIS 3.11).
   This Forgejo has no API for job logs, so each job tees its output to /tmp/ci.log and always uploads it to the
   draft release "CI logs" (no tag): `scripts/ci-log.sh list`, `scripts/ci-log.sh get run3-windows-failure.log`
@@ -164,8 +164,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.12.4)
-Latest (0.12.4): macos job installs rustup for the runner user (`forgejo-runner` on servai had no cargo). 0.12.3: macOS built by CI on a Mac runner; release waits for all three. 0.12.2: releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
+## Status (2026-11-22, version 0.12.5)
+Latest (0.12.5): Windows job moved to the Mac runner servai (cross-compile with Homebrew nsis/llvm/lld + cargo-xwin;
+servai built macOS in 1.5 min vs ~10 min per job on `server`). 0.12.4: macos job installs rustup for the runner user (`forgejo-runner` on servai had no cargo). 0.12.3: macOS built by CI on a Mac runner; release waits for all three. 0.12.2: releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
 Windows). 0.12.0 (first release on git.1011.no, all platforms): automatic release on a green push to main; scripts/release-mac.sh. 0.11.3: build logs readable via scripts/ci-log.sh. 0.11.2: Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
 launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
 image showing. 0.10.0: Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
