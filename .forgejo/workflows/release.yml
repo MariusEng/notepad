@@ -136,7 +136,7 @@ jobs:
         run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
 
   # On the Mac runner itself (host mode, no container): register it with the label `macos:host`. It needs Xcode's
-  # command line tools, Node 20+ and Rust (Homebrew or rustup). The checkout and target/ stay between runs, so
+  # command line tools and Node 20+; Rust is installed for the runner's user on the first run if it is missing. The checkout and target/ stay between runs, so
   # builds after the first are incremental.
   macos:
     runs-on: macos
@@ -151,6 +151,11 @@ jobs:
           export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
           : > ci.log
           exec > >(tee -a ci.log) 2>&1
+          xcode-select -p >/dev/null 2>&1 || { echo "Xcode command line tools missing on the runner: xcode-select --install"; exit 1; }
+          # Rust for the runner's own user, installed once (host mode: it stays in its home folder).
+          if ! command -v cargo >/dev/null; then
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          fi
           node --version; cargo --version
           rm -rf src-tauri/target/release/bundle
           npm ci
