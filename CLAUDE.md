@@ -169,7 +169,8 @@ replacing it.
 
 ## Status (2026-11-22, version 0.12.6)
 Latest (0.12.6): Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
-git.1011.no). 0.12.5: Windows job moved to the Mac runner servai (cross-compile with Homebrew nsis/llvm/lld + cargo-xwin;
+git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and
+Ctrl+N / Ctrl+Shift+N work. 0.12.5: Windows job moved to the Mac runner servai (cross-compile with Homebrew nsis/llvm/lld + cargo-xwin;
 servai built macOS in 1.5 min vs ~10 min per job on `server`). 0.12.4: macos job installs rustup for the runner user (`forgejo-runner` on servai had no cargo). 0.12.3: macOS built by CI on a Mac runner; release waits for all three. 0.12.2: releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
 Windows). 0.12.0 (first release on git.1011.no, all platforms): automatic release on a green push to main; scripts/release-mac.sh. 0.11.3: build logs readable via scripts/ci-log.sh. 0.11.2: Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
 launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
