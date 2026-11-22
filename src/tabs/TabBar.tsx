@@ -3,6 +3,10 @@ import { Menu } from "@tauri-apps/api/menu";
 import { closeOtherTabs, closeTab, encodingMenuItems, newTab, saveTab, setLanguage } from "../actions";
 import { LANGUAGE_LIST } from "../editors/languages";
 import { useTabs, type Tab } from "./store";
+import { useGit } from "../git/store";
+import { useSettings } from "../settings";
+import { gitMarkText, refreshGitMarks, useGitMarks } from "../sidebar/actions";
+import { GitGlyph } from "../sidebar/Sidebar";
 
 async function showTabMenu(tab: Tab) {
   const { tabs, splitId } = useTabs.getState();
@@ -81,6 +85,16 @@ export function TabBar() {
   const drag = useRef<Drag | null>(null);
   const strip = useRef<HTMLDivElement>(null);
   const groups = groupsOf(tabs, mainId, splitId);
+  const marks = useGitMarks((s) => s.marks);
+
+  // Which open files are in a git repository (re-checked after commits, pulls, new files, repo changes).
+  const paths = useTabs((s) => s.tabs.map((t) => t.path ?? "").filter(Boolean).join("\n"));
+  const treeVersion = useGit((s) => s.treeVersion);
+  const repoRoot = useGit((s) => s.repo?.root);
+  useSettings((s) => s.autoCommit); // re-render: the git mark's tooltip depends on it
+  useEffect(() => {
+    void refreshGitMarks(paths ? paths.split("\n") : []);
+  }, [paths, treeVersion, repoRoot]);
 
   // Keep the active tab visible when switching with the keyboard.
   useEffect(() => {
@@ -174,14 +188,17 @@ export function TabBar() {
 
   useEffect(() => onUp, []); // unmount mid-drag
 
-  const renderTab = (tab: Tab) => (
+  const renderTab = (tab: Tab) => {
+    const mark = tab.path ? marks[tab.path] : null;
+    const markText = mark ? gitMarkText(mark) : "";
+    return (
     <div
       key={tab.id}
       data-tab-id={tab.id}
       role="tab"
       aria-selected={tab.id === activeId}
-      title={tab.path ?? tab.title}
-      className={`tab${tab.id === activeId ? " active" : ""}${splitId && tab.id !== activeId && (tab.id === mainId || tab.id === splitId) ? " in-split" : ""}${tab.dirty ? " dirty" : ""}`}
+      title={mark ? `${tab.path}\n${markText}` : (tab.path ?? tab.title)}
+      className={`tab${mark ? " in-git" : ""}${tab.id === activeId ? " active" : ""}${splitId && tab.id !== activeId && (tab.id === mainId || tab.id === splitId) ? " in-split" : ""}${tab.dirty ? " dirty" : ""}`}
       onPointerDown={(e) => onPointerDown(e, tab)}
       onAuxClick={(e) => {
         if (e.button === 1) {
@@ -194,6 +211,7 @@ export function TabBar() {
         showTabMenu(tab);
       }}
     >
+      {mark && <GitGlyph title={markText} />}
       <span className="tab-title">{tab.title}</span>
       <button
         className="tab-close"
@@ -210,7 +228,8 @@ export function TabBar() {
         </svg>
       </button>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="tabbar" onDoubleClick={(e) => e.target === e.currentTarget && newTab()}>

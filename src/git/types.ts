@@ -25,6 +25,14 @@ export interface DirEntry {
   isDir: boolean;
 }
 
+/** A file (or folder) that is inside a git working tree and not ignored. */
+export interface GitPathInfo {
+  root: string;
+  name: string;
+  /** In the last commit or the index; false for a new file that hasn't been committed yet. */
+  tracked: boolean;
+}
+
 export interface SyncResult {
   state: "local-only" | "up-to-date" | "pushed" | "pulled" | "merged" | "conflict";
   message: string;

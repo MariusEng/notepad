@@ -30,6 +30,7 @@ import {
   toggleAutoCommit,
   toggleSidebar,
 } from "./git/actions";
+import { openFolder, restoreFolder } from "./sidebar/actions";
 import { activeEditor } from "./editors/handle";
 import { backend } from "./lib/backend";
 import { useTabs } from "./tabs/store";
@@ -67,6 +68,7 @@ const MENU: Record<string, () => unknown> = {
     if (!ed?.selectColumn?.()) useTabs.getState().notify("Select Column works in CSV and log files (with columns).");
   },
   format: formatActive,
+  open_folder: openFolder,
   open_repo: openRepoFolder,
   new_repo: () => openDialog({ kind: "newRepo" }),
   clone_repo: () => openDialog({ kind: "clone" }),
@@ -104,6 +106,7 @@ async function start() {
   await restoreSession();
   startSessionAutosave();
   void restoreRepo();
+  void restoreFolder();
 
   const win = getCurrentWindow();
   // Closing the window quits the app; save the session first (the handler is awaited).

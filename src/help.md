@@ -77,9 +77,16 @@ Select a rectangle of text across several lines, for example one column of a CSV
   - **UTF-8 with BOM** turns the byte order mark on or off.
 - If some bytes can't be read in the chosen encoding, they show as **�** and the status bar turns red. Saving then asks first, because those bytes would be replaced.
 
+## Sidebar: folders and repositories
+
+- **File → Open Folder…** (⌥⌘O · Ctrl+Alt+O) shows any folder in the sidebar. With a repository open too, the repository is on top and the folder below; drag the line between them to share the height (double-click: half and half).
+- **Right-click** a file or folder in either tree for **New File…** and **New Folder…** (created in the folder you clicked, or next to the file). Type the name and press Enter; Esc cancels. New files open in a tab. Right-clicking empty space creates at the top level.
+- Click the folder's name for New File, New Folder, Open Another Folder and Close Folder.
+- **Files in git are marked**: a tab whose file is in a git repository (and not ignored) shows an orange git mark, so you know not to put passwords or other secrets in it. Hover the mark to see which repository, and whether saving commits and pushes it. A folder that is inside a repository shows the same mark next to its name.
+
 ## Git repositories
 
-- **File → Open Repository…** (⇧⌘O) opens any folder inside a git repository. Its files are listed in the sidebar.
+- **File → Open Repository…** (⇧⌘O) opens any folder inside a git repository. Its files are listed at the top of the sidebar.
 - **Hide or show the sidebar** with the button at its top right, the button at the left of the status bar, or **⇧⌘E** (Ctrl+Shift+E).
 - **Saving commits and pushes** the saved file. Turn this off under View → *Auto Commit & Push on Save*.
 - **Branches**: click the repository name in the sidebar, or the branch name in the status bar, to switch branch, create a new one, or open a pull request. Branches that only exist on the server are under *Remote Branches*.

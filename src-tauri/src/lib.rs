@@ -14,6 +14,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 mod creds;
+mod files;
 mod git_cmds;
 mod gitops;
 mod oauth;
@@ -359,6 +360,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("new", "New", Some("CmdOrCtrl+N"))?,
             &item("new_of_type", "New File of Type…", Some("CmdOrCtrl+Shift+N"))?,
             &item("open", "Open…", Some("CmdOrCtrl+O"))?,
+            &item("open_folder", "Open Folder…", Some("Alt+CmdOrCtrl+O"))?,
             &PredefinedMenuItem::separator(app)?,
             &item("open_repo", "Open Repository…", Some("CmdOrCtrl+Shift+O"))?,
             &item("clone_repo", "Clone Repository…", None)?,
@@ -367,7 +369,6 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("switch_branch", "Switch Branch…", None)?,
             &item("new_branch", "New Branch…", None)?,
             &item("git_accounts", "Git Accounts…", None)?,
-            &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::separator(app)?,
             &item("save", "Save", Some("CmdOrCtrl+S"))?,
             &item("save_as", "Save As…", Some("CmdOrCtrl+Shift+S"))?,
@@ -437,7 +438,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("toggle_source", "Toggle Source View", Some("CmdOrCtrl+/"))?,
             &item("toggle_format_bar", "Show/Hide Formatting Bar", None)?,
             &item("close_split", "Close Split View", None)?,
-            &item("toggle_sidebar", "Show/Hide Repository Sidebar", Some("CmdOrCtrl+Shift+E"))?,
+            &item("toggle_sidebar", "Show/Hide Sidebar", Some("CmdOrCtrl+Shift+E"))?,
             &item("toggle_autocommit", "Auto Commit & Push on Save (On/Off)", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("next_tab", "Next Tab        Ctrl+Tab", None)?,
@@ -549,6 +550,10 @@ pub fn run() {
             take_pending_open,
             quit_app,
             format_external,
+            git_cmds::fs_list_dir,
+            git_cmds::fs_create_file,
+            git_cmds::fs_create_dir,
+            git_cmds::git_path_info,
             git_cmds::git_open,
             git_cmds::git_info,
             git_cmds::git_list_dir,

@@ -45,6 +45,11 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **Split view**: right-click a tab → **Open to the Right** to see two files side by side
   (drag the divider to resize, double-click it to reset; **Close Split View** in the tab menu or View menu).
   The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
+- **Sidebar with a folder browser** (File → Open Folder…, ⌥⌘O): any folder, shown under the repository when
+  one is open (drag the line between them to resize). Right-click in either tree → **New File…** / **New Folder…**
+  (inline name field; new files open in a tab).
+- **Git mark on tabs**: files inside a git repository (not ignored) get an orange git mark in the tab bar, so
+  it's obvious which files are committed and pushed and shouldn't hold secrets. The tooltip names the repository.
 - **Git repositories** (File → Open Repository…, ⇧⌘O): open any folder inside an existing repository and edit
   its files from a quiet sidebar (⇧⌘E to hide/show). **Saving commits and pushes** the file ("Update notes.md");
   if the remote moved on, the changes are merged first. A conflicting change is never applied: your commits stay
@@ -78,7 +83,8 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 | Find | ⌘F | Ctrl+F |
 | Format Document | ⇧⌥F | Shift+Alt+F |
 | Toggle source (Markdown, HTML) | ⌘/ | Ctrl+/ |
-| Show/hide repository sidebar | ⇧⌘E | Ctrl+Shift+E |
+| Open folder | ⌥⌘O | Ctrl+Alt+O |
+| Show/hide sidebar | ⇧⌘E | Ctrl+Shift+E |
 | Find and replace | ⌥⌘F | Ctrl+H |
 | Find next / previous | ⌘G / ⇧⌘G | F3 / Shift+F3 |
 | Select CSV/log column | Ctrl+Space | Ctrl+Space |
@@ -110,6 +116,7 @@ src/
   keymap.ts             tab-switching shortcuts (other shortcuts are native menu accelerators)
   session/session.ts    hot exit: session.json + buffers, external change detection
   tabs/                 tab store (Zustand) and tab bar
+  sidebar/              sidebar: repository + folder trees, New File/Folder, git marks on tabs
   editors/
     MarkdownEditor.tsx  Milkdown Crepe (formatted Markdown)
     mdFormat.ts         formatting commands used by the formatting bar
@@ -124,6 +131,7 @@ src/
   About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
+src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"
 src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone
 src-tauri/src/creds.rs  credentials: keychain, then the git credential helper; token refresh
 src-tauri/src/oauth.rs  device flow and browser (PKCE) sign-in

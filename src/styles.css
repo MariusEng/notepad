@@ -569,10 +569,62 @@ body.resizing {
   background: var(--bg-hover);
   color: var(--fg);
 }
+.sb-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.sb-divider {
+  flex: none;
+  height: 1px;
+  background: var(--border);
+  position: relative;
+  cursor: row-resize;
+}
+.sb-divider::after {
+  /* Bigger grab area than the 1px line. */
+  content: "";
+  position: absolute;
+  inset: -3px 0;
+}
+body.resizing-v,
+body.resizing-v * {
+  cursor: row-resize !important;
+  user-select: none;
+}
 .sb-tree {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding-bottom: 12px;
+}
+.sb-input {
+  flex: 1;
+  min-width: 0;
+  height: 20px;
+  padding: 0 4px;
+  margin-left: -4px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+.git-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  align-self: center;
+  color: var(--git);
+}
+.git-mark svg {
+  width: 12px;
+  height: 12px;
+}
+.tab.in-git {
+  padding-left: 9px;
 }
 .sb-node {
   display: flex;

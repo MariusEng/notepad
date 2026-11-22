@@ -5,7 +5,7 @@ import { StatusBar } from "./StatusBar";
 import { Banner } from "./Banner";
 import { TypePicker } from "./TypePicker";
 import { FormatBar } from "./FormatBar";
-import { Sidebar } from "./git/Sidebar";
+import { Sidebar } from "./sidebar/Sidebar";
 import { GitDialogs } from "./git/Dialogs";
 import { AboutDialog } from "./About";
 import { CodeEditor } from "./editors/CodeEditor";

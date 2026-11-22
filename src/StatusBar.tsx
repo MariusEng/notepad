@@ -33,13 +33,14 @@ function RepoStatus() {
   );
 }
 
-/** Shown only while a repository is open and its sidebar is hidden. */
+/** Shown only while a repository or folder is open and the sidebar is hidden. */
 function SidebarToggle() {
   const repo = useGit((s) => s.repo);
+  const folder = useSettings((s) => s.folderRoot);
   const visible = useSettings((s) => s.sidebar);
-  if (!repo || visible) return null;
+  if ((!repo && !folder) || visible) return null;
   return (
-    <button className="sb-item sb-btn sb-icon" title="Show repository sidebar (⇧⌘E · Ctrl+Shift+E)" aria-label="Show repository sidebar" onClick={toggleSidebar}>
+    <button className="sb-item sb-btn sb-icon" title="Show sidebar (⇧⌘E · Ctrl+Shift+E)" aria-label="Show sidebar" onClick={toggleSidebar}>
       <svg viewBox="0 0 16 16" aria-hidden>
         <rect x="2" y="3" width="12" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" />
         <path d="M6 3v10" stroke="currentColor" strokeWidth="1.3" />

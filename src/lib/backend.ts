@@ -3,6 +3,7 @@ import type {
   BranchInfo,
   DeviceStart,
   DirEntry,
+  GitPathInfo,
   NewRepo,
   ProviderCfg,
   RepoCreated,
@@ -116,6 +117,16 @@ export const backend = {
   quit: () => invoke<void>("quit_app"),
   formatExternal: (tool: "shfmt" | "perltidy" | "pwsh", input: string, indent = 2) =>
     invoke<string>("format_external", { tool, input, indent }),
+};
+
+/** Folder browser (any folder, no git needed). */
+export const files = {
+  listDir: (dir: string) => invoke<DirEntry[]>("fs_list_dir", { dir }),
+  /** Creates an empty file / folder in `dir`; resolves to its full path. Fails if the name exists. */
+  createFile: (dir: string, name: string) => invoke<string>("fs_create_file", { dir, name }),
+  createDir: (dir: string, name: string) => invoke<string>("fs_create_dir", { dir, name }),
+  /** The git repository a path is in, or null (not in one, or ignored). */
+  gitInfo: (path: string) => invoke<GitPathInfo | null>("git_path_info", { path }),
 };
 
 export const git = {

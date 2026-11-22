@@ -13,11 +13,15 @@ interface SettingsData {
   autoCommit: boolean;
   /** The repository to reopen on launch. */
   repoRoot: string | null;
+  /** The folder shown in the sidebar's folder browser (reopened on launch). */
+  folderRoot: string | null;
+  /** Share of the sidebar height used by the repository when both it and a folder are shown (0.15–0.85). */
+  sidebarSplit: number;
   /** Git accounts (the secrets are in the OS keychain, not here). */
   accounts: Account[];
 }
 
-type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "accounts">;
+type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts">;
 
 interface Settings extends SettingsData {
   setTheme: (t: ThemePref) => void;
@@ -35,6 +39,8 @@ const persist = (s: SettingsData) =>
         sidebar: s.sidebar,
         autoCommit: s.autoCommit,
         repoRoot: s.repoRoot,
+        folderRoot: s.folderRoot,
+        sidebarSplit: s.sidebarSplit,
         accounts: s.accounts,
       }),
     )
@@ -46,6 +52,8 @@ export const useSettings = create<Settings>((set, get) => ({
   sidebar: true,
   autoCommit: true,
   repoRoot: null,
+  folderRoot: null,
+  sidebarSplit: 0.5,
   accounts: [],
   setTheme: (theme) => {
     set({ theme });
@@ -71,6 +79,8 @@ export async function loadSettings() {
       sidebar: data.sidebar ?? true,
       autoCommit: data.autoCommit ?? true,
       repoRoot: data.repoRoot ?? null,
+      folderRoot: data.folderRoot ?? null,
+      sidebarSplit: typeof data.sidebarSplit === "number" ? data.sidebarSplit : 0.5,
       accounts: Array.isArray(data.accounts) ? data.accounts : [],
     });
     useSettings.getState().setTheme(data.theme ?? "system");

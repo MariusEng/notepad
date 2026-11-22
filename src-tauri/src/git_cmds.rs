@@ -2,6 +2,7 @@
 //! anything that can take a while (network) runs on a worker thread so the UI stays responsive.
 
 use crate::creds::{self, Stored};
+use crate::files::{self, GitPathInfo};
 use crate::gitops::{self, BranchInfo, DirEntry, RepoInfo, SyncResult};
 use crate::oauth;
 use crate::provider::{self, NewRepo, ProviderCfg, RepoCreated};
@@ -17,6 +18,31 @@ where
     let joined = tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string())?;
     joined
 }
+
+// ---------------------------------------------------------------- folder browser
+
+#[tauri::command]
+pub fn fs_list_dir(dir: String) -> Res<Vec<DirEntry>> {
+    files::list_dir(&dir)
+}
+
+#[tauri::command]
+pub fn fs_create_file(dir: String, name: String) -> Res<String> {
+    files::create_file(&dir, &name)
+}
+
+#[tauri::command]
+pub fn fs_create_dir(dir: String, name: String) -> Res<String> {
+    files::create_dir(&dir, &name)
+}
+
+/// The git repository a file belongs to (None: not in one, or ignored), for the tab bar's git mark.
+#[tauri::command]
+pub fn git_path_info(path: String) -> Option<GitPathInfo> {
+    files::git_path_info(&path)
+}
+
+// ---------------------------------------------------------------- repository
 
 #[tauri::command]
 pub fn git_open(path: String) -> Res<RepoInfo> {
