@@ -133,7 +133,8 @@ the features, shortcuts and file layout.
   deling.1011.no (0.12.2): `scripts/deling-publish.sh <tag> <readme> <files…>` → POST /api/releases, slug
   `notepad`, Bearer token (CI secret DELING_TOKEN; Mac: env or keychain item `deling-api-token`). The API is
   LAN/Tailscale-only (this Mac reaches it: 401 without token). Same slug REPLACES the release as a whole, so the
-  CI step publishes Linux+Windows and release-mac.sh republishes all Forgejo release assets + dmg. Missing token
+  CI publishes all files at once (0.12.3: macos job on the user's Mac runner "servai", label `macos`, host mode,
+  incremental target/); release-mac.sh is the manual fallback and republishes all Forgejo release assets + dmg. Missing token
   → message, exit 0. Default `international=false` (downloads only from Norway).
   The user chose NOT to code-sign or notarise macOS (no Apple Developer account); builds are ad-hoc/linker-signed.
 
@@ -163,8 +164,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.12.2)
-Latest (0.12.2): releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
+## Status (2026-11-22, version 0.12.3)
+Latest (0.12.3): macOS built by CI on a Mac runner; release waits for all three. 0.12.2: releases also published on deling.1011.no/notepad (needs the DELING_TOKEN secret). 0.12.1: Ctrl+N / Ctrl+Shift+N on Windows (WebView2 browser keys off + page fallback; not yet tried on
 Windows). 0.12.0 (first release on git.1011.no, all platforms): automatic release on a green push to main; scripts/release-mac.sh. 0.11.3: build logs readable via scripts/ci-log.sh. 0.11.2: Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
 launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
 image showing. 0.10.0: Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,

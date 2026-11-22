@@ -7,10 +7,10 @@
 #  - Pushing a tag by hand (git tag v0.12.0 && git push origin v0.12.0) builds that commit and attaches the files to
 #    that tag's release.
 #  - Actions → release → Run workflow: builds only (download the files from the run's artifacts).
-#  - The release is also published for friends on https://deling.1011.no/notepad (Actions secret DELING_TOKEN;
-#    see scripts/deling-publish.sh).
-#  - macOS is built on a Mac and attached to the same release with scripts/release-mac.sh, which also publishes
-#    the full set (with the dmg) on deling again.
+#  - macOS is built on a Mac runner (label `macos`, host mode: see the macos job).
+#  - The release is also published for friends on https://deling.1011.no/notepad with all files at once (Actions
+#    secret DELING_TOKEN; see scripts/deling-publish.sh). If the Mac runner is down, scripts/release-mac.sh on any
+#    Mac adds the dmg to the release and republishes the full set on deling.
 #
 # Each job's output is also attached to the draft release "CI logs" (read with scripts/ci-log.sh), because this
 # Forgejo has no API for job logs.
@@ -135,9 +135,51 @@ jobs:
           FORGEJO_REPO: ${{ github.repository }}
         run: scripts/ci-log.sh upload /tmp/ci.log "run${{ github.run_number }}-windows-${{ job.status }}.log"
 
-  # Runs only when both builds are green.
+  # On the Mac runner itself (host mode, no container): register it with the label `macos:host`. It needs Xcode's
+  # command line tools, Node 20+ and Rust (Homebrew or rustup). The checkout and target/ stay between runs, so
+  # builds after the first are incremental.
+  macos:
+    runs-on: macos
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          clean: false # keep src-tauri/target for incremental builds
+
+      - name: Build
+        run: |
+          # A runner started by launchd doesn't get the shell's PATH.
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.cargo/bin:$PATH"
+          : > ci.log
+          exec > >(tee -a ci.log) 2>&1
+          node --version; cargo --version
+          rm -rf src-tauri/target/release/bundle
+          npm ci
+          # CI=true makes Tauri skip the Finder styling of the dmg window (needs no GUI session).
+          CI=true npx tauri build --bundles app,dmg
+
+      - name: Collect
+        run: |
+          exec > >(tee -a ci.log) 2>&1
+          rm -rf out && mkdir -p out
+          cp src-tauri/target/release/bundle/dmg/*.dmg out/
+          ls -la out
+
+      - uses: https://code.forgejo.org/actions/upload-artifact@v3
+        with:
+          name: notepad-macos
+          path: out/
+
+      - name: Upload build log
+        if: always()
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGEJO_URL: ${{ github.server_url }}
+          FORGEJO_REPO: ${{ github.repository }}
+        run: scripts/ci-log.sh upload ci.log "run${{ github.run_number }}-macos-${{ job.status }}.log"
+
+  # Runs only when all three builds are green.
   release:
-    needs: [linux, windows]
+    needs: [linux, windows, macos]
     if: github.event_name == 'push'
     runs-on: docker
     container:
@@ -178,7 +220,7 @@ jobs:
             echo
             echo "- **Windows**: \`Notepad_*_x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
             echo "- **Linux**: \`.deb\` (Debian/Ubuntu), \`.rpm\` (Fedora/openSUSE) or \`.AppImage\` (any distribution)"
-            echo "- **macOS** (Apple Silicon): \`.dmg\`, added from a Mac (unsigned: right-click → Open the first time)"
+            echo "- **macOS** (Apple Silicon): \`.dmg\` (unsigned: right-click → Open the first time)"
           } > /tmp/notes.md
           cat /tmp/notes.md
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -198,8 +240,7 @@ jobs:
           ls -laR dist-release
           RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/forgejo-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
 
-      # Friends download from https://deling.1011.no/notepad. Linux and Windows go up now; scripts/release-mac.sh
-      # publishes the whole set again with the macOS dmg (deling replaces a release as a whole).
+      # Friends download from https://deling.1011.no/notepad: every platform in one release.
       - name: Publish on deling.1011.no
         if: steps.decide.outputs.publish == 'true'
         env:
