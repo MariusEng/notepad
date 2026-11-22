@@ -70,7 +70,8 @@ jobs:
   windows:
     runs-on: docker
     container:
-      image: node:20-bookworm
+      # Trixie: its NSIS (3.11) has Win\RestartManager.nsh, which Tauri's installer script needs (bookworm's 3.08 doesn't).
+      image: node:20-trixie
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
 
@@ -78,6 +79,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends build-essential curl perl nsis lld llvm clang python3
+          makensis -VERSION
 
       - name: Rust and cargo-xwin
         run: |

@@ -1,6 +1,6 @@
 [package]
 name = "notepad"
-version = "0.11.1"
+version = "0.11.2"
 description = "A modern notepad with WYSIWYG Markdown and syntax highlighting"
 edition = "2021"
 

@@ -121,7 +121,9 @@ the features, shortcuts and file layout.
 
 - Releases (0.11.1): `.forgejo/workflows/release.yml` (tag `v*` or manual), both jobs on a Linux `docker` runner
   in `node:20-bookworm`: Linux deb/rpm/AppImage, Windows NSIS cross-compiled with cargo-xwin (experimental in
-  Tauri; NOT YET RUN: the user was setting up the runner on git.1011.no on 2026-11-22). macOS is built on the Mac
+  Tauri). Runner `server` (labels docker, ubuntu-latest) exists. Run #1: Linux OK (~11 min); Windows compiled but
+  makensis failed on bookworm (NSIS 3.08 lacks Win\RestartManager.nsh) → Windows job uses node:20-trixie (NSIS 3.11).
+  This Forgejo has no API for job logs: ask the user for the log file. macOS is built on the Mac
   and attached with `scripts/forgejo-release.sh <tag> <files>` (creates the release if missing, replaces assets).
   The user chose NOT to code-sign or notarise macOS (no Apple Developer account); builds are ad-hoc/linker-signed.
 
@@ -146,8 +148,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.11.1)
-Latest (0.11.1): release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
+## Status (2026-11-22, version 0.11.2)
+Latest (0.11.2): Windows job on Debian trixie for a newer NSIS. 0.11.1: release workflow for Linux/Windows on Forgejo Actions (untested until the runner exists). 0.11.0: single instance (release builds), relative images in formatted Markdown. Checked: a second release
 launch with a relative file argument exits at once and the running app opens the file. Not yet checked by eye: an
 image showing. 0.10.0: Move to Trash from the sidebar (commits + pushes in the repo), hidden tabs free their text,
 background tabs load lazily on launch, 4 MB read chunks. 0.9.0: folder browser in the sidebar (below the repository), right-click New File/New Folder in both trees,
