@@ -151,6 +151,11 @@ the features, shortcuts and file layout.
   (a job's workdir is new every run, so src-tauri/target never persisted); bundles are copied from there.
 
 ## Gotchas found so far
+- macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
+  linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
+  whole bundle (hardened runtime on; the app still starts). Downloaded copies then get the normal "unverified
+  developer" prompt → System Settings → Privacy & Security → Open Anyway (right-click → Open no longer works on
+  recent macOS). Check with `codesign --verify --deep --strict Notepad.app`.
 - Windows Credential Manager: max 2560 bytes per entry (keyring stores UTF-16 → 1280 units). creds.rs splits a
   longer secret (OAuth access + refresh token) into `host#1..N` entries with `parts:N` in the main entry; short
   secrets and old entries stay one plain JSON entry (0.12.6, after the user's Windows sign-in failed).
@@ -179,8 +184,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.13.1)
-Latest (0.13.1): persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
+## Status (2026-11-22, version 0.13.2)
+Latest (0.13.2): macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was
 git.1011.no). VERIFIED on Windows by the user (0.12.6): browser sign-in to git.1011.no saves, and

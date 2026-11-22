@@ -235,7 +235,7 @@ jobs:
             echo
             echo "- **Windows**: \`Notepad_*_x64-setup.exe\` (unsigned: SmartScreen → More info → Run anyway)"
             echo "- **Linux**: \`.deb\` (Debian/Ubuntu), \`.rpm\` (Fedora/openSUSE) or \`.AppImage\` (any distribution)"
-            echo "- **macOS** (Apple Silicon): \`.dmg\` (unsigned: right-click → Open the first time)"
+            echo "- **macOS** (Apple Silicon): \`.dmg\`. Not notarised: the first time macOS says it can't check the app; click Done, then System Settings → Privacy & Security → **Open Anyway**."
           } > /tmp/notes.md
           cat /tmp/notes.md
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

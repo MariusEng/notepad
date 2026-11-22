@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Notepad",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "identifier": "no.1011.notepad",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -34,6 +34,9 @@
     "active": true,
     "targets": "all",
     "category": "Productivity",
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "shortDescription": "Notepad with WYSIWYG Markdown and syntax highlighting",
     "icon": [
       "icons/32x32.png",

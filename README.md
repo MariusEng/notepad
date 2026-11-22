@@ -139,7 +139,9 @@ cd src-tauri && cargo test
   docker, then the Linux job can use it.
 - **Build logs**: every job attaches its log to the draft release *CI logs*. `scripts/ci-log.sh list` shows them,
   `scripts/ci-log.sh get run3-windows-failure.log` downloads one (uses your git credentials for git.1011.no).
-- Nothing is code-signed. macOS: open with right-click → Open the first time (Gatekeeper). Windows: SmartScreen
+- No paid code signing. The macOS app is ad-hoc signed (`bundle.macOS.signingIdentity: "-"`; without it a
+  downloaded app is reported as "damaged"); the first time, macOS says it can't check the developer: System
+  Settings → Privacy & Security → **Open Anyway**. Windows: SmartScreen
   → *More info* → *Run anyway*.
 
 ### Layout
