@@ -20,6 +20,7 @@ import { cmHighlight, cmTheme } from "./cmTheme";
 import { registerEditor } from "./handle";
 import { setValidation } from "./validation";
 import { columnSelection } from "./blockSelect";
+import { macroRecorder } from "./macro";
 import { useTabs, type Tab } from "../tabs/store";
 
 function selectColumnNotify(view: EditorView): boolean {
@@ -78,6 +79,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
         highlightActiveLine(),
         highlightSelectionMatches(),
         findAndReplace(),
+        macroRecorder(),
         indentUnit.of(tab.language === "yaml" || tab.language === "json" ? "  " : "    "),
         // Ctrl+Space selects the column in CSV and log files (Excel's shortcut, on macOS too).
         keymap.of([{ key: "Ctrl-Space", run: (v) => selectColumnNotify(v) }]),
@@ -175,6 +177,7 @@ export function CodeEditor({ tab }: { tab: Tab }) {
       findNext: (dir) => findStep(view, dir),
       useSelectionForFind: () => useSelectionForFind(view),
       selectColumn: () => selectColumnNotify(view),
+      view: () => view,
       select: (from, to) => {
         const len = view.state.doc.length;
         view.dispatch({

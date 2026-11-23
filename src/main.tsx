@@ -22,6 +22,8 @@ import {
 } from "./actions";
 import { openAbout } from "./About";
 import { checkForUpdates, startAutoUpdates } from "./updates";
+import { openMacroDialog, playLast, toggleRecording } from "./editors/macro";
+import { macroRecord } from "./editors/macroBus";
 import { openSaveAsPicker, openTypePicker } from "./TypePicker";
 import {
   openDialog,
@@ -70,8 +72,12 @@ const MENU: Record<string, () => unknown> = {
   select_column: () => {
     const ed = activeEditor();
     if (!ed?.selectColumn?.()) useTabs.getState().notify("Select Column works in CSV and log files (with columns).");
+    else macroRecord({ t: "selectColumn" });
   },
   format: formatActive,
+  macro_record: toggleRecording,
+  macro_play: playLast,
+  macro_macros: openMacroDialog,
   new_database: newDatabase,
   open_folder: openFolder,
   open_repo: openRepoFolder,

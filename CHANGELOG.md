@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.19.0 — 2026-11-23
+
+- **Macros**, as in Notepad++: Edit → Macro → Start/Stop Recording (⇧⌘R · Ctrl+Shift+R), do an edit once, then Play it (⇧⌘P · Ctrl+Shift+P), run it a number of times or until the end of the file, and save it with a name.
+
 ## 0.18.1 — 2026-11-23
 
 - macOS: Notepad is now signed with its own certificate, so after this update you allow keychain access one last time; later updates don't ask again.

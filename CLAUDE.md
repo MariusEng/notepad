@@ -221,6 +221,16 @@ the features, shortcuts and file layout.
   deling gets the files minus .app.tar.gz, plus latest.json for 0.17.0. Why it helps on macOS: the app downloads with its own HTTP client, so no quarantine xattr →
   no Gatekeeper prompt. Keychain items made by an ad-hoc signed build may still ask "allow access" after an update.
 
+- Macros (0.19.0, user request, like Notepad++): `editors/macroBus.ts` (step types + recorder hook, no imports, so
+  FindPanel can record without a cycle), `editors/macro.tsx` (CodeMirror recorder extension in CodeEditor: inputHandler
+  observer at Prec.highest for text, domEventObservers for keys with Ctrl/⌘ or named keys, paste/copy/cut, beforeinput
+  historyUndo/Redo; playback: keys via runScopeHandlers(view, KeyboardEvent, "editor"), text char by char through the
+  inputHandler facet (closeBrackets only acts on single chars), find/replace via FindPanel.playSearch; paste uses
+  what copy/cut set during the same playback). Run once / n / until EOF (stops at doc end or when a run changes
+  nothing), yields every 100 ms. Menu Edit → Macro (macro_record ⇧⌘R, macro_play ⇧⌘P, macro_macros dialog).
+  settings.lastMacro + settings.macros. Mouse not recorded. Not in formatted Markdown or the SQLite query editor
+  (EditorHandle.view only in CodeEditor). Tested with jsdom in the scratchpad (8 cases); ArrowUp/Down need real layout.
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -263,8 +273,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.18.1)
-Latest (0.18.1): macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.19.0)
+Latest (0.19.0): macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

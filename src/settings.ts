@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { backend } from "./lib/backend";
 import { setThemePref, type ThemePref } from "./theme/theme";
 import type { Account } from "./git/types";
+import type { MacroStep } from "./editors/macroBus";
 
 interface SettingsData {
   theme: ThemePref;
@@ -21,9 +22,12 @@ interface SettingsData {
   accounts: Account[];
   /** Look for a new version at launch and once a day (updates.tsx). */
   autoUpdates: boolean;
+  /** The last recorded macro (Edit → Macro → Play) and the ones saved with a name (editors/macro.tsx). */
+  lastMacro: MacroStep[] | null;
+  macros: { name: string; steps: MacroStep[] }[];
 }
 
-type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts" | "autoUpdates">;
+type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts" | "autoUpdates" | "lastMacro" | "macros">;
 
 interface Settings extends SettingsData {
   setTheme: (t: ThemePref) => void;
@@ -45,6 +49,8 @@ const persist = (s: SettingsData) =>
         sidebarSplit: s.sidebarSplit,
         accounts: s.accounts,
         autoUpdates: s.autoUpdates,
+        lastMacro: s.lastMacro,
+        macros: s.macros,
       }),
     )
     .catch(() => {});
@@ -59,6 +65,8 @@ export const useSettings = create<Settings>((set, get) => ({
   sidebarSplit: 0.5,
   accounts: [],
   autoUpdates: true,
+  lastMacro: null,
+  macros: [],
   setTheme: (theme) => {
     set({ theme });
     setThemePref(theme);
@@ -87,6 +95,8 @@ export async function loadSettings() {
       sidebarSplit: typeof data.sidebarSplit === "number" ? data.sidebarSplit : 0.5,
       accounts: Array.isArray(data.accounts) ? data.accounts : [],
       autoUpdates: data.autoUpdates ?? true,
+      lastMacro: Array.isArray(data.lastMacro) ? data.lastMacro : null,
+      macros: Array.isArray(data.macros) ? data.macros : [],
     });
     useSettings.getState().setTheme(data.theme ?? "system");
   } catch {

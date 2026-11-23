@@ -34,6 +34,9 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
 - **Find and replace** with OS shortcuts (⌘F/⌥⌘F/⌘G/⇧⌘G/⌘E on macOS; Ctrl+F/Ctrl+H/F3/Shift+F3 on Windows/Linux):
   match count, case/word, Notepad++'s search modes (Normal, Extended `\n \r \t \0 \xNN \uNNNN`, regular expression with `$1`
   groups), and **find in selection** (e.g. replace only within a selected column).
+- **Macros** like Notepad++ (Edit → Macro): record typing, editing keys, find/replace, copy/cut/paste and undo
+  (⇧⌘R / Ctrl+Shift+R), play (⇧⌘P / Ctrl+Shift+P), run n times or until the end of the file, save with a name
+  (`editors/macro.tsx`; kept in settings.json).
 - **Select CSV/log columns**: Ctrl+Space (as in Excel) or Alt/Option+double-click selects the column(s) at the cursor on
   every line, or only on the selected lines; each line gets its own cursor.
 - **Save As** asks for the file type first (current type preselected), then where to save.

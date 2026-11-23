@@ -454,6 +454,17 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     )?;
 
     // The predefined clipboard items are required on macOS for copy/paste to work in the webview.
+    // Macros like Notepad++ (editors/macro.tsx). Ctrl+Shift+R / Ctrl+Shift+P as there; ⇧⌘R / ⇧⌘P on macOS.
+    let macro_menu = Submenu::with_items(
+        app,
+        "Macro",
+        true,
+        &[
+            &item("macro_record", "Start/Stop Recording", Some("CmdOrCtrl+Shift+R"))?,
+            &item("macro_play", "Play", Some("CmdOrCtrl+Shift+P"))?,
+            &item("macro_macros", "Run Multiple Times / Saved Macros…", None)?,
+        ],
+    )?;
     let edit = Submenu::with_items(
         app,
         "Edit",
@@ -470,6 +481,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &find_menu,
             &item("select_column", "Select Column (CSV, Log)", Some("Ctrl+Space"))?,
             &item("format", "Format Document", Some("Shift+Alt+F"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &macro_menu,
         ],
     )?;
 

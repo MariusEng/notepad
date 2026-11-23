@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { EditorSelection, StateEffect, StateField, type Extension, type Range } from "@codemirror/state";
 import { Decoration, EditorView, runScopeHandlers, type Panel, type ViewUpdate } from "@codemirror/view";
+import { macroRecord, type QuerySpec } from "./macroBus";
 import {
   SearchQuery,
   closeSearchPanel,
@@ -173,8 +174,19 @@ function select(view: EditorView, m: { from: number; to: number }) {
   view.dispatch({ selection: EditorSelection.single(m.from, m.to), scrollIntoView: true, userEvent: "select.search" });
 }
 
-/** Next/previous match, staying inside the scope when "in selection" is on. */
+/** The current search, for macros. */
+const specOf = (view: EditorView): QuerySpec => {
+  const q = getSearchQuery(view.state);
+  return { search: q.search, replace: q.replace, caseSensitive: q.caseSensitive, regexp: q.regexp, wholeWord: q.wholeWord, literal: q.literal };
+};
+
+/** Next/previous match, staying inside the scope when "in selection" is on (recorded in a macro). */
 export function findStep(view: EditorView, dir: 1 | -1): boolean {
+  macroRecord({ t: "find", dir, q: specOf(view) });
+  return findStepInner(view, dir);
+}
+
+function findStepInner(view: EditorView, dir: 1 | -1): boolean {
   const query = getSearchQuery(view.state);
   const scope = scopeOf(view);
   if (!query.valid) {
@@ -191,6 +203,11 @@ export function findStep(view: EditorView, dir: 1 | -1): boolean {
 }
 
 function replaceOne(view: EditorView) {
+  macroRecord({ t: "replace", q: specOf(view) });
+  replaceOneInner(view);
+}
+
+function replaceOneInner(view: EditorView) {
   const query = getSearchQuery(view.state);
   const scope = scopeOf(view);
   if (!query.valid) return;
@@ -204,10 +221,15 @@ function replaceOne(view: EditorView) {
     const text = replacementFor(query, view.state.sliceDoc(hit.from, hit.to));
     view.dispatch({ changes: { from: hit.from, to: hit.to, insert: text }, selection: EditorSelection.cursor(hit.from + text.length), userEvent: "input.replace" });
   }
-  findStep(view, 1);
+  findStepInner(view, 1);
 }
 
 function replaceEvery(view: EditorView): number {
+  macroRecord({ t: "replaceAll", q: specOf(view) });
+  return replaceEveryInner(view);
+}
+
+function replaceEveryInner(view: EditorView): number {
   const query = getSearchQuery(view.state);
   const scope = scopeOf(view);
   if (!query.valid) return 0;
@@ -247,6 +269,19 @@ function countMatches(view: EditorView, query: SearchQuery): { count: number; cu
     }
   }
   return { count, current, more: false };
+}
+
+// ---------------------------------------------------------------- macro playback
+
+/** Runs a recorded search action with the search it was recorded with (the find panel needn't be open). */
+export function playSearch(view: EditorView, action: "find" | "replace" | "replaceAll" | "selectMatches", q: QuerySpec, dir: 1 | -1 = 1) {
+  const cur = getSearchQuery(view.state);
+  if (cur.search !== q.search || cur.replace !== q.replace || cur.regexp !== q.regexp || cur.caseSensitive !== q.caseSensitive || cur.wholeWord !== q.wholeWord || cur.literal !== q.literal)
+    view.dispatch({ effects: setSearchQuery.of(new SearchQuery(q)) });
+  if (action === "find") findStepInner(view, dir);
+  else if (action === "replace") replaceOneInner(view);
+  else if (action === "replaceAll") replaceEveryInner(view);
+  else selectMatches(view);
 }
 
 // ---------------------------------------------------------------- the panel
@@ -383,6 +418,7 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.altKey) {
                   e.preventDefault();
+                  macroRecord({ t: "selectMatches", q: specOf(view) });
                   if (selectMatches(view)) view.focus();
                 } else if (e.key === "Enter") {
                   e.preventDefault();

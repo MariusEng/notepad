@@ -1364,3 +1364,9 @@ body.resizing-v * {
 .sb-update {
   color: var(--accent);
 }
+
+/* ---------- macros (editors/macro.tsx) ---------- */
+.sb-rec {
+  color: var(--danger);
+  font-weight: 600;
+}

@@ -53,6 +53,22 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - The count shows which match is selected and how many there are.
 - In formatted Markdown and the HTML preview, Find switches to the source first.
 
+## Macros
+
+Repeat an edit as often as you like, as in Notepad++:
+
+1. **Edit → Macro → Start/Stop Recording** (**⇧⌘R** · Ctrl+Shift+R). The status bar shows **● Recording macro**.
+2. Do the edit once: type, use Enter, Backspace, Delete, the arrow keys, Home/End, Tab, keys with ⌘/Ctrl or Option/Alt, Find Next and Replace, copy, cut, paste and undo.
+3. Stop with the same keys (or click the status bar).
+4. **Play** it with **⇧⌘P** (Ctrl+Shift+P). **Edit → Macro → Run Multiple Times / Saved Macros…** runs it a number of times or **until the end of the file**, and saves it with a name so you can use it again later.
+
+Tips:
+
+- Start where the edit begins (e.g. at the start of a line) and end where the next one should begin (e.g. the start of the next line). Then "until the end of the file" does every line.
+- Paste in a macro pastes what the macro copied or cut earlier in the same run; otherwise the text pasted while recording.
+- Mouse clicks aren't recorded. Macros work in code and plain-text files and in the source view of Markdown and HTML.
+- A long run can be stopped by clicking **Playing macro…** in the status bar.
+
 ## Selecting CSV and log columns
 
 - **Ctrl+Space** (on macOS too, as in Excel) selects the column the cursor is in, on every line. Or **Alt/Option + double-click** a field.

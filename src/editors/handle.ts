@@ -1,3 +1,4 @@
+import type { EditorView } from "@codemirror/view";
 import { useTabs } from "../tabs/store";
 
 /** Lets app-level actions (menu, shortcuts) talk to whichever editor is mounted. */
@@ -50,6 +51,8 @@ export interface EditorHandle {
   flush?(): void;
   /** Selects a range and scrolls it into view (code editor only). */
   select?(from: number, to: number): void;
+  /** The CodeMirror view (code editor only): macros record and play in it. */
+  view?(): EditorView;
 }
 
 // One handle per mounted editor (there are two while the view is split).

@@ -41,6 +41,14 @@ Every shortcut in Notepad. On macOS, ⌘ is Command, ⌥ is Option, ⇧ is Shift
 | Complete a table or column name | ⌃Space or keep typing | Ctrl+Space or keep typing |
 | Create the table (New Table dialog) | ⌘↵ | Ctrl+Enter |
 
+## Macros
+
+| Action | macOS | Windows / Linux |
+|---|---|---|
+| Start / stop recording a macro | ⇧⌘R | Ctrl+Shift+R |
+| Play the last recorded macro | ⇧⌘P | Ctrl+Shift+P |
+| Run several times, until the end of the file, or a saved macro | Edit → Macro → Run Multiple Times / Saved Macros… | same |
+
 ## Find and replace
 
 | Action | macOS | Windows / Linux |
