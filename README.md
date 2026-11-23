@@ -117,7 +117,9 @@ the bot isn't trusted, `ci.yml` (typecheck, build, `cargo test`, Linux docker ru
 Approve on the pull request, and without secrets. Read changes to `.forgejo/` first (the pull request says so).
 Branch protection: merging into main needs a green `ci / test`; direct pushes still work. Merge on Forgejo; GitHub
 then shows it merged (after squash/rebase the sync comments and closes it). `scripts/github-pr.sh` is the manual
-alternative. Never merge on GitHub (the mirror overwrites GitHub's branches).
+alternative. Never merge on GitHub (the mirror overwrites GitHub's branches). GitHub enforces it: ruleset "main comes
+from git.1011.no" lets only the GitHub App update main (no Merge button, no direct pushes, also for admins), and
+ruleset "Default" blocks deleting main and force pushes, with the app as an exception.
 
 
 Requirements: Node.js 20+, Rust (stable), and the

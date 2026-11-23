@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.16.3 — 2026-11-23
+
+- GitHub only accepts changes that come from git.1011.no, so pull requests can't be merged there by mistake.
+
 ## 0.16.2 — 2026-11-23
 
 - Pull requests on GitHub are now tested automatically on git.1011.no before they are merged.

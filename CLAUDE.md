@@ -199,6 +199,10 @@ the features, shortcuts and file layout.
   → mirror pushes main → GitHub marks merged (merge commit), else the sync comments + closes it (app has Pull
   requests: write). `.forgejo/workflows/ci.yml` = test job (docker runner only; typecheck, build, cargo test).
   Branch protection on main: status check `ci / test (pull_request)`, pushes allowed.
+  Verified end to end 2026-11-23 (GitHub #2 → Forgejo #2 → approve → ci green in 4 min → merge → GitHub "merged").
+  The approval is the workflow approval on the run (Actions page or PR box; no API for it): "Approve once", never
+  "trust" the bot. GitHub rulesets: "main comes from git.1011.no" (rule update, bypass only the App, id 5891842) and
+  the user's "Default" (deletion + non_fast_forward; bypass admin role + the App: the mirror force-pushes main).
 
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
@@ -234,8 +238,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.16.2)
-Latest (0.16.2): GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.16.3)
+Latest (0.16.3): docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
