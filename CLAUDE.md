@@ -317,6 +317,13 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
+- TODO (reported 2026-11-23, 0.19.1): macro playback "until the end of the file" doesn't seem to stop at the end of the
+  file. Check `playMacro` in editors/macro.tsx: it only stops when the cursor is at doc.length BEFORE a run, or when a
+  run changes neither the text nor the cursor. Suspects: a macro that ends on the last line without reaching
+  doc.length (e.g. Home … ArrowDown on a last line that isn't empty, or a trailing newline being re-added), so every
+  run still edits the last line until MAX_RUNS (100,000). Notepad++ stops once the caret reaches the end of the file.
+  Ideas: also stop when a run leaves the cursor on the same line as before (or a line before it) while editing,
+  and/or when the cursor ends on the last line; test with the jsdom setup (scratchpad) plus a real-app check.
 - More memory ideas (not done): after editing a big document (> 2 M chars) the store holds a flattened copy while
   CodeMirror's lines still pin the original string (≈ 2× the file); keeping no store copy for mounted big docs would
   need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
