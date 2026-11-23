@@ -125,6 +125,8 @@ export interface OpenOptions {
   preview?: boolean;
   /** Double click in the sidebar: keep the tab open (also turns an open preview tab into a normal one). */
   pin?: boolean;
+  /** From the command line: a path that doesn't exist yet opens as an empty tab; saving creates the file. */
+  create?: boolean;
 }
 
 /** Files being read right now, so a double click (which starts as a single click) doesn't open a file twice. */
@@ -168,6 +170,12 @@ async function openOne(path: string, opts: OpenOptions) {
     const oldPreview = opts.preview ? store().tabs.find((t) => t.preview && !t.dirty) : undefined;
     const replaceId = oldPreview?.id ?? (cur && isPristine(cur) ? cur.id : undefined);
     const preview = opts.preview && !opts.pin ? true : undefined;
+    if (opts.create && (await backend.fileMtime(path)) === null) {
+      const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path), mtime: null });
+      if (tab.language === "html") tab.mdSource = true;
+      store().addTab(tab, { replaceId });
+      return;
+    }
     // SQLite databases are recognised by their header, whatever they are called.
     if (await db.probe(path)) {
       store().addTab(dbTab(path, preview), { replaceId });

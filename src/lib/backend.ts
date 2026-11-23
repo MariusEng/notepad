@@ -115,6 +115,8 @@ export const backend = {
   pruneBuffers: (keep: string[]) => invoke<void>("prune_buffers", { keep }),
   takePendingOpen: () => invoke<string[]>("take_pending_open"),
   quit: () => invoke<void>("quit_app"),
+  /** macOS: puts the `notepad` command in /usr/local/bin (asks for an admin password if needed). Resolves to its path. */
+  installCli: () => invoke<string>("install_cli"),
   formatExternal: (tool: "shfmt" | "perltidy" | "pwsh", input: string, indent = 2) =>
     invoke<string>("format_external", { tool, input, indent }),
 };

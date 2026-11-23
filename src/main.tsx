@@ -84,6 +84,7 @@ const MENU: Record<string, () => unknown> = {
   shortcuts: openShortcuts,
   encoding: () => showEncodingMenu(),
   about: openAbout,
+  install_cli: installCli,
   toggle_sidebar: toggleSidebar,
   toggle_autocommit: toggleAutoCommit,
   close_split: () => useTabs.getState().closeSplit(),
@@ -109,6 +110,17 @@ function runMenu(id: string) {
   MENU[id]?.();
 }
 
+/** Notepad → Install Command Line Tool… (macOS). */
+async function installCli() {
+  const { notify } = useTabs.getState();
+  try {
+    const path = await backend.installCli();
+    notify(`Installed ${path}. In a terminal: notepad file.txt`);
+  } catch (e) {
+    if (String(e) !== "Cancelled.") notify(`Could not install the notepad command: ${e}`, "error");
+  }
+}
+
 async function start() {
   await loadSettings();
 
@@ -116,7 +128,8 @@ async function start() {
   listen<string>("menu", (e) => runMenu(e.payload));
 
   // Files opened from Finder/Explorer, the command line, or dropped onto the window.
-  listen("open-files", async () => openFiles(await backend.takePendingOpen()));
+  // (`create`: `notepad new.md` from a terminal opens a file that doesn't exist yet.)
+  listen("open-files", async () => openFiles(await backend.takePendingOpen(), { create: true }));
   getCurrentWebview().onDragDropEvent((e) => {
     if (e.payload.type === "drop") openFiles(e.payload.paths);
   });
@@ -141,7 +154,7 @@ async function start() {
   });
 
   const pending = await backend.takePendingOpen();
-  if (pending.length) await openFiles(pending);
+  if (pending.length) await openFiles(pending, { create: true });
   if (useTabs.getState().tabs.length === 0) newTab();
 
   createRoot(document.getElementById("root")!).render(<App />);

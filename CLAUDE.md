@@ -171,6 +171,14 @@ the features, shortcuts and file layout.
   them). UI `src/db/` (DbView: table list, CodeMirror SQLite + schema completion, results grid; NewTable dialog;
   sql.ts quoting/CSV/CREATE TABLE). File → New Database… and the ⇧⌘N picker's "SQLite Database" entry.
 
+- Command line (0.16.0, user request "notepad filename.txt"): macOS menu Notepad → Install Command Line Tool… →
+  `cli.rs` installs a sh script at /usr/local/bin/notepad (direct `install`, else osascript admin prompt; refuses to
+  overwrite a file without its "Installed by Notepad" mark). The script makes paths absolute and runs
+  `open -n -b no.1011.notepad --args …`; the new instance hands off via the single-instance plugin. `files_from_args`
+  also keeps paths that don't exist yet (folder must exist); pending opens use `openFiles(…, {create:true})` → empty
+  clean tab with that path and mtime null (checkExternalChanges skips mtime-null tabs). Windows: not done, and
+  `notepad` there is Microsoft's notepad.exe (System32 comes first on PATH).
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -205,8 +213,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.15.0)
-Latest (0.15.0): SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.16.0)
+Latest (0.16.0): `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

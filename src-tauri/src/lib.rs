@@ -17,6 +17,7 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 #[cfg(debug_assertions)]
 use tauri_plugin_single_instance as _;
 
+mod cli;
 mod creds;
 mod db;
 mod files;
@@ -354,10 +355,11 @@ mod tests {
         std::fs::write(d.join("a.md"), "a").unwrap();
         let abs = d.join("a.md").to_string_lossy().into_owned();
         let got = files_from_args(
-            ["a.md".to_string(), "--flag".into(), "missing.md".into(), abs.clone(), "-psn_0_123".into()],
+            ["a.md".to_string(), "--flag".into(), "missing.md".into(), abs.clone(), "-psn_0_123".into(), "nodir/x.md".into(), ".".into()],
             &d,
         );
-        assert_eq!(got, vec![abs.clone(), abs]);
+        let missing = d.join("missing.md").to_string_lossy().into_owned();
+        assert_eq!(got, vec![abs.clone(), missing, abs]);
         let _ = std::fs::remove_dir_all(&d);
     }
 
@@ -532,6 +534,8 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &[
                 &item("about", "About Notepad", None)?,
                 &PredefinedMenuItem::separator(app)?,
+                &item("install_cli", "Install Command Line Tool…", None)?,
+                &PredefinedMenuItem::separator(app)?,
                 &PredefinedMenuItem::hide(app, None)?,
                 &PredefinedMenuItem::hide_others(app, None)?,
                 &PredefinedMenuItem::show_all(app, None)?,
@@ -552,7 +556,8 @@ fn files_from_args(args: impl IntoIterator<Item = String>, cwd: &Path) -> Vec<St
     args.into_iter()
         .filter(|a| !a.starts_with('-'))
         .map(|a| cwd.join(a)) // join keeps an absolute path as it is
-        .filter(|p| p.is_file())
+        // A file that doesn't exist yet (`notepad new.md`) opens as an empty tab that saving creates; its folder must exist.
+        .filter(|p| p.is_file() || (!p.exists() && p.parent().is_some_and(|d| d.is_dir())))
         .map(|p| p.to_string_lossy().into_owned())
         .collect()
 }
@@ -675,6 +680,7 @@ pub fn run() {
             git_cmds::oauth_device_start,
             git_cmds::oauth_device_poll,
             git_cmds::oauth_login,
+            cli::install_cli,
             db::db_probe,
             db::db_schema,
             db::db_run,

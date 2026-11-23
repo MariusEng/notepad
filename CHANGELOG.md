@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.16.0 — 2026-11-23
+
+- **Open files from a terminal** on macOS: Notepad → Install Command Line Tool… adds the `notepad` command, so `notepad file.txt` opens the file in Notepad. A file that doesn't exist yet opens as a new, empty tab, and saving creates it.
+
 ## 0.15.0 — 2026-11-23
 
 - **SQLite databases**: open `.sqlite` and `.db` files (or any SQLite file) in a tab with their tables and views, a SQL editor that completes table and column names, and a results grid. ⌘↵ (Ctrl+Enter) runs the SQL or the selected part; Stop cancels a long query; Open as CSV copies the results to a new tab.

@@ -234,6 +234,7 @@ export async function checkExternalChanges() {
     if (!t.path || t.loading || t.unloaded || t.kind) continue; // (databases aren't text)
     const mtime = await backend.fileMtime(t.path).catch(() => null);
     if (mtime === null) {
+      if (t.mtime === null) continue; // a new file from the command line that hasn't been saved yet
       if (t.external !== "deleted") update(t.id, { external: "deleted" });
       continue;
     }

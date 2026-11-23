@@ -48,6 +48,9 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
   session buffers).
 - **Relative images in Markdown** (`![](images/a.png)`) show in the formatted view (asset protocol, one allowed
   image file at a time); the Markdown keeps the relative path.
+- **Command line** (macOS): Notepad → Install Command Line Tool… writes `/usr/local/bin/notepad` (admin prompt if
+  needed; `src-tauri/src/cli.rs`): `notepad a.txt new.md` opens files in the running app (`open -n -b` + the
+  single-instance handoff); missing files open as empty tabs that saving creates.
 - **Single instance**: opening a file while Notepad runs opens it in the running app (release builds).
 - **Hot exit**: close the app at any time. Open tabs, unsaved edits and untitled documents
   are restored on the next launch, with cursor and scroll position.
