@@ -32,7 +32,8 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
   CSV detects the delimiter (`,` `;` tab `|`) and bolds the header; logs detect their leading columns
   (timestamp, level, [thread], logger…) and tint error and warning lines.
 - **Find and replace** with OS shortcuts (⌘F/⌥⌘F/⌘G/⇧⌘G/⌘E on macOS; Ctrl+F/Ctrl+H/F3/Shift+F3 on Windows/Linux):
-  match count, case/word/regex, `$1` groups, and **find in selection** (e.g. replace only within a selected column).
+  match count, case/word, Notepad++'s search modes (Normal, Extended `\n \r \t \0 \xNN \uNNNN`, regular expression with `$1`
+  groups), and **find in selection** (e.g. replace only within a selected column).
 - **Select CSV/log columns**: Ctrl+Space (as in Excel) or Alt/Option+double-click selects the column(s) at the cursor on
   every line, or only on the selected lines; each line gets its own cursor.
 - **Save As** asks for the file type first (current type preselected), then where to save.

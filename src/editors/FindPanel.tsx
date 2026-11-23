@@ -20,14 +20,100 @@ import {
 
 /**
  * Find and replace for the code editor, in place of CodeMirror's stock panel (its search state, match
- * highlighting and commands are still used). Extras: a match count, and "find in selection", which limits
- * find and replace to what was selected, e.g. a column picked with Ctrl+Space or Alt+drag.
+ * highlighting and commands are still used). Extras: a match count, "find in selection", which limits
+ * find and replace to what was selected (e.g. a column picked with Ctrl+Space or Alt+drag), and Notepad++'s three
+ * search modes: Normal (the text as typed), Extended (\n \r \t \0 \\ \xNN \uNNNN in Find and Replace) and
+ * Regular expression.
  *
  * Shortcuts follow the OS (native menu, see lib.rs): Find ⌘F / Ctrl+F, Replace ⌥⌘F / Ctrl+H,
  * Next ⌘G / F3, Previous ⇧⌘G / Shift+F3, Use Selection for Find ⌘E (macOS).
  * In the panel: Enter = next, Shift+Enter = previous, Alt+Enter = select all matches,
  * Enter in Replace = replace, ⌘Enter / Ctrl+Enter = replace all, Esc = close.
  */
+
+// ---------------------------------------------------------------- search modes
+
+export type FindMode = "normal" | "extended" | "regex";
+
+/** What the user typed, and how to read it. CodeMirror's query holds the text actually searched for (in Extended
+ *  mode with the escapes turned into characters), so the fields keep showing "\t" rather than a tab. */
+interface FindText {
+  mode: FindMode;
+  search: string;
+  replace: string;
+}
+
+/** Extended mode: \n \r \t \0 \\ \xNN \uNNNN \u{N…} become characters; any other backslash stays as typed. */
+export function unescapeExtended(s: string): string {
+  return s.replace(/\\(x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]{1,6}\}|u[0-9a-fA-F]{4}|[nrt0\\])/g, (all, e: string) => {
+    switch (e[0]) {
+      case "n":
+        return "\n";
+      case "r":
+        return "\r";
+      case "t":
+        return "\t";
+      case "0":
+        return "\0";
+      case "\\":
+        return "\\";
+      case "x":
+        return String.fromCharCode(parseInt(e.slice(1), 16));
+      default: {
+        const cp = parseInt(e.replace(/[u{}]/g, ""), 16);
+        return cp <= 0x10ffff ? String.fromCodePoint(cp) : all;
+      }
+    }
+  });
+}
+
+/** The other way, for text taken from the document (⌘E): line breaks, tabs and backslashes as escapes. */
+export function escapeExtended(s: string): string {
+  return s.replace(/[\\\n\r\t\0]/g, (c) => ({ "\\": "\\\\", "\n": "\\n", "\r": "\\r", "\t": "\\t", "\0": "\\0" })[c]!);
+}
+
+const setFindText = StateEffect.define<FindText>();
+/** The mode carries over to the next editor's find panel. */
+let lastMode: FindMode = "normal";
+
+const findTextField = StateField.define<FindText | null>({
+  create: () => null,
+  update(v, tr) {
+    for (const e of tr.effects) if (e.is(setFindText)) return e.value;
+    return v;
+  },
+});
+
+function buildQuery(t: FindText, opts: { caseSensitive: boolean; wholeWord: boolean }) {
+  const ext = t.mode === "extended";
+  return new SearchQuery({
+    search: ext ? unescapeExtended(t.search) : t.search,
+    replace: ext ? unescapeExtended(t.replace) : t.replace,
+    regexp: t.mode === "regex",
+    // Regex: CodeMirror reads \n \r \t in the replacement. Normal and Extended: the text is used as it is.
+    literal: t.mode !== "regex",
+    ...opts,
+  });
+}
+
+/** The typed text and mode. If CodeMirror's query was set some other way (opening Find with a selection), it wins. */
+function findTextOf(view: EditorView): FindText {
+  const q = getSearchQuery(view.state);
+  const t = view.state.field(findTextField, false);
+  if (t) {
+    const built = buildQuery(t, q);
+    if (built.search === q.search && built.replace === q.replace && built.regexp === q.regexp) return t;
+  }
+  const mode: FindMode = q.regexp ? "regex" : t?.mode === "extended" || (!t && lastMode === "extended") ? "extended" : "normal";
+  return mode === "extended"
+    ? { mode, search: escapeExtended(q.search), replace: escapeExtended(q.replace) }
+    : { mode, search: q.search, replace: q.replace };
+}
+
+function applyFind(view: EditorView, t: FindText, opts: { caseSensitive: boolean; wholeWord: boolean }) {
+  lastMode = t.mode;
+  view.dispatch({ effects: [setFindText.of(t), setSearchQuery.of(buildQuery(t, opts))] });
+}
 
 // ---------------------------------------------------------------- find in selection
 
@@ -72,9 +158,10 @@ function scopedMatches(view: EditorView, query: SearchQuery, scope: NonNullable<
 
 const unquote = (s: string) => s.replace(/\\([nrt\\])/g, (_, c) => (c === "n" ? "\n" : c === "r" ? "\r" : c === "t" ? "\t" : "\\"));
 
-/** The replacement for one matched text, with $1-style groups for regular expressions. */
+/** The replacement for one matched text, with $1-style groups for regular expressions. (Normal and Extended
+ *  queries already hold the final replacement text: see buildQuery.) */
 function replacementFor(query: SearchQuery, matched: string) {
-  if (!query.regexp) return unquote(query.replace);
+  if (!query.regexp) return query.replace;
   try {
     return matched.replace(new RegExp(query.search, query.caseSensitive ? "u" : "iu"), unquote(query.replace));
   } catch {
@@ -186,11 +273,15 @@ export function useSelectionForFind(view: EditorView) {
   const sel = view.state.selection.main;
   if (sel.empty) return;
   const q = getSearchQuery(view.state);
-  view.dispatch({
-    effects: setSearchQuery.of(
-      new SearchQuery({ ...q, search: view.state.sliceDoc(sel.from, sel.to), regexp: false, replace: q.replace }),
-    ),
-  });
+  const t = findTextOf(view);
+  const text = view.state.sliceDoc(sel.from, sel.to);
+  // Text with line breaks or tabs is put in as Extended escapes, so the find field shows it on one line.
+  const mode: FindMode = t.mode === "extended" || /[\n\r\t\0]/.test(text) ? "extended" : "normal";
+  applyFind(
+    view,
+    { mode, search: mode === "extended" ? escapeExtended(text) : text, replace: t.replace },
+    q,
+  );
 }
 
 function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () => void) => () => void }) {
@@ -213,6 +304,7 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
   }, [view]);
 
   const query = getSearchQuery(view.state);
+  const text = findTextOf(view);
   const scope = scopeOf(view);
 
   // Count after typing pauses briefly (the document may be huge).
@@ -222,15 +314,18 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
     return () => clearTimeout(t);
   }, [key, view]);
 
-  const setQuery = (patch: Partial<{ search: string; replace: string; caseSensitive: boolean; regexp: boolean; wholeWord: boolean }>) => {
+  const setQuery = (patch: Partial<FindText & { caseSensitive: boolean; wholeWord: boolean }>) => {
     const q = getSearchQuery(view.state);
+    const t = findTextOf(view);
     setNote("");
-    view.dispatch({
-      effects: setSearchQuery.of(
-        new SearchQuery({ search: q.search, replace: q.replace, caseSensitive: q.caseSensitive, regexp: q.regexp, wholeWord: q.wholeWord, ...patch }),
-      ),
-    });
+    applyFind(
+      view,
+      { mode: patch.mode ?? t.mode, search: patch.search ?? t.search, replace: patch.replace ?? t.replace },
+      { caseSensitive: patch.caseSensitive ?? q.caseSensitive, wholeWord: patch.wholeWord ?? q.wholeWord },
+    );
   };
+  /** Extended and regular expression switch each other off; clicking the one that is on goes back to Normal. */
+  const toggleMode = (m: FindMode) => setQuery({ mode: text.mode === m ? "normal" : m });
 
   const toggleScope = () => {
     view.dispatch({ effects: setScope.of(scope ? null : selectionScope(view)) });
@@ -283,7 +378,7 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
               placeholder="Find"
               aria-label="Find"
               spellCheck={false}
-              value={query.search}
+              value={text.search}
               onChange={(e) => setQuery({ search: e.target.value })}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.altKey) {
@@ -301,7 +396,14 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
             <Opt on={query.wholeWord} title="Match Whole Word" onClick={() => setQuery({ wholeWord: !query.wholeWord })}>
               <u>ab</u>
             </Opt>
-            <Opt on={query.regexp} title="Use Regular Expression" onClick={() => setQuery({ regexp: !query.regexp })}>
+            <Opt
+              on={text.mode === "extended"}
+              title="Extended: \n line break, \r, \t tab, \0, \\ backslash, \xNN and \uNNNN characters (in Find and Replace)"
+              onClick={() => toggleMode("extended")}
+            >
+              \n
+            </Opt>
+            <Opt on={text.mode === "regex"} title="Use Regular Expression ($1 for groups; \n and \t in Replace)" onClick={() => toggleMode("regex")}>
               .*
             </Opt>
           </div>
@@ -331,7 +433,7 @@ function FindPanel({ view, subscribe }: { view: EditorView; subscribe: (f: () =>
                 placeholder="Replace"
                 aria-label="Replace"
                 spellCheck={false}
-                value={query.replace}
+                value={text.replace}
                 onChange={(e) => setQuery({ replace: e.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (mod(e) || (e.ctrlKey && e.altKey))) {
@@ -410,5 +512,6 @@ function createPanel(view: EditorView): Panel {
 
 /** The search extension with this panel. */
 export function findAndReplace(): Extension {
-  return [scopeField, search({ top: true, createPanel })];
+  // literal: a query CodeMirror makes itself (opening Find with a selection) searches for exactly that text.
+  return [scopeField, findTextField, search({ top: true, createPanel, literal: true })];
 }

@@ -43,7 +43,12 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 | Replace / replace all | Enter / ⌘Enter in the replace field | Enter / Ctrl+Enter in the replace field |
 | Close | Esc | Esc |
 
-- **Aa** matches case, **ab** whole words, **.\*** regular expressions (use `$1` in the replacement for groups; `\n` and `\t` work too).
+- **Aa** matches case, **ab** whole words.
+- Three search modes, as in Notepad++:
+  - **Normal** (both buttons off): finds exactly what you type.
+  - **\\n Extended**: `\n` (line break), `\r`, `\t` (tab), `\0`, `\\` (backslash), `\xNN` and `\uNNNN` (any character by its code) work in both Find and Replace. For example, find `\t` and replace with `,` to turn tabs into commas, or find `,` and replace with `\n` to put every value on its own line. A search can span lines: `end\nstart`.
+  - **.\*** Regular expressions: use `$1` in the replacement for groups; `\n` and `\t` work in the replacement too.
+- **⌘E** (use selection for Find) with a selection over several lines or with tabs switches to Extended, so the find field shows it as `\n` and `\t`.
 - **Find in selection** (the button with lines, right of the arrows) limits finding and replacing to the text that was selected, for example a column. It turns on by itself when you open Find with a selection over several lines.
 - The count shows which match is selected and how many there are.
 - In formatted Markdown and the HTML preview, Find switches to the source first.

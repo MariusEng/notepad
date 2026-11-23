@@ -26,6 +26,9 @@ the features, shortcuts and file layout.
 - Find and replace (`editors/FindPanel.tsx`, CodeMirror `search({createPanel})` with a React panel): OS-default
   shortcuts via the native Edit → Find submenu (macOS ⌘F ⌥⌘F ⌘G ⇧⌘G ⌘E; Win/Linux Ctrl+F Ctrl+H F3 Shift+F3), match
   count, case/word/regex, find-in-selection scope (StateField, auto-on for multi-line/multi-range selections).
+  Search modes like Notepad++ (0.18.0): Normal (literal), Extended (`\n` button: \n \r \t \0 \\ \xNN \uNNNN in Find AND
+  Replace), Regex (.*). The typed text + mode live in `findTextField`; CodeMirror's SearchQuery holds the unescaped
+  text (literal:true except regex), so the fields keep showing "\t". search({literal:true}) for CM-made queries.
 - CSV/log "Select Column" (`selectColumn` in columns.ts, `columnInfo` facet): Ctrl+Space (Excel) / Alt+double-click;
   whole column, several columns, or part of a column (selected lines); one range per line, capped at 200k lines.
 - Save As… shows the type picker first (TypePicker `saveAs` mode), then the native dialog: macOS's save panel
@@ -252,8 +255,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.17.1)
-Latest (0.17.1): updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.18.0)
+Latest (0.18.0): Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

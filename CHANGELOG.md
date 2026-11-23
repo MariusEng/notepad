@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.18.0 — 2026-11-23
+
+- **Extended search**, as in Notepad++: turn on **\\n** in the find panel and use `\n` (line break), `\t` (tab), `\r`, `\0`, `\xNN` and `\uNNNN` in Find and Replace, e.g. replace tabs with commas, or split a list onto separate lines. Normal search now finds exactly what you type.
+
 ## 0.17.1 — 2026-11-23
 
 - Updates now come from GitHub Releases.
