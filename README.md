@@ -108,6 +108,10 @@ All shortcuts, for macOS and Windows/Linux, are in **[SHORTCUTS.md](SHORTCUTS.md
 
 ## Development
 
+**macOS signing** (0.18.1): builds are signed with Notepad's own self-signed certificate so keychain access
+("Always Allow") survives updates: `scripts/macos-signing-setup.sh` creates it once (Forgejo secrets + login-keychain
+backup), `scripts/with-signing-keychain.sh <build command>` uses it (CI and release-mac.sh). Without it: ad-hoc.
+
 **Updates** (0.17.0): CI builds sign the update files (secrets TAURI_SIGNING_PRIVATE_KEY and
 TAURI_SIGNING_PRIVATE_KEY_PASSWORD; backup in the Mac's login keychain as `notepad-updater-private-key` /
 `notepad-updater-key-password`; the public key is in tauri.conf.json). The release job writes `latest.json`

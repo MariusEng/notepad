@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.18.1 — 2026-11-23
+
+- macOS: Notepad is now signed with its own certificate, so after this update you allow keychain access one last time; later updates don't ask again.
+
 ## 0.18.0 — 2026-11-23
 
 - **Extended search**, as in Notepad++: turn on **\\n** in the find panel and use `\n` (line break), `\t` (tab), `\r`, `\0`, `\xNN` and `\uNNNN` in Find and Replace, e.g. replace tabs with commas, or split a list onto separate lines. Normal search now finds exactly what you type.

@@ -24,7 +24,7 @@ if [ "$code" != "200" ]; then
   exit 1
 fi
 
-npx tauri build --bundles app,dmg
+scripts/with-signing-keychain.sh npx tauri build --bundles app,dmg
 dmg=$(ls src-tauri/target/release/bundle/dmg/Notepad_"${version}"_*.dmg)
 FORGEJO_TOKEN="$token" scripts/forgejo-release.sh "$tag" "$dmg"
 echo "Attached $(basename "$dmg") to $url/$repo/releases/tag/$tag"

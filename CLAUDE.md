@@ -227,6 +227,14 @@ the features, shortcuts and file layout.
   whole bundle (hardened runtime on; the app still starts). Downloaded copies then get the normal "unverified
   developer" prompt → System Settings → Privacy & Security → Open Anyway (right-click → Open no longer works on
   recent macOS). Check with `codesign --verify --deep --strict Notepad.app`.
+- Keychain prompts after every update (2026-11-23, user: "allow keychain access three times"): keychain ACLs follow the
+  app's designated requirement; ad-hoc = cdhash = new each build. Fix (0.18.1): a self-signed code signing certificate
+  (`scripts/macos-signing-setup.sh`, RUN BY THE USER: makes it, stores Forgejo secrets MACOS_SIGNING_P12(+_PASSWORD)
+  and the login-keychain backup notepad-macos-signing-p12(-password)). `scripts/with-signing-keychain.sh <build cmd>`
+  puts it in a temporary keychain and sets APPLE_SIGNING_IDENTITY=<sha1> (Tauri's APPLE_CERTIFICATE route needs an
+  Apple certificate; codesign itself accepts an untrusted one). DR becomes `certificate leaf = H"…"`: stable. No
+  certificate or a setup error → ad-hoc build with a warning. Gatekeeper is unchanged (still unidentified). I was not
+  allowed to store the secrets myself (permission check), so the user runs the setup script.
 - Windows Credential Manager: max 2560 bytes per entry (keyring stores UTF-16 → 1280 units). creds.rs splits a
   longer secret (OAuth access + refresh token) into `host#1..N` entries with `parts:N` in the main entry; short
   secrets and old entries stay one plain JSON entry (0.12.6, after the user's Windows sign-in failed).
@@ -255,8 +263,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.18.0)
-Latest (0.18.0): Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.18.1)
+Latest (0.18.1): macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
