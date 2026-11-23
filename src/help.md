@@ -103,6 +103,18 @@ Select a rectangle of text across several lines, for example one column of a CSV
 - Conflicting changes from the server are never applied: your commits stay local and the status bar shows a warning.
 - **File → Git Accounts…** manages sign-ins (token or browser sign-in). Only HTTPS remotes are supported.
 
+## SQLite databases
+
+- **Open** an SQLite database like any file (File → Open, the sidebar, drag and drop). Notepad recognises it by its contents, whatever its extension (`.sqlite`, `.db`…).
+- **File → New Database…** (or ⇧⌘N · Ctrl+Shift+N → *SQLite Database*) creates an empty database where you choose.
+- The tab shows the **tables and views** on the left. Click one to see its rows; click ▸ to see its columns (the primary key is bold); right-click for Insert SELECT, Copy CREATE Statement, New Table… and Drop Table….
+- **New Table…** (the **+** above the list): a name and its columns with type, key, required (NOT NULL), unique and a default value. The CREATE TABLE statement is shown as you go; **Edit as SQL** puts it in the query editor instead, for foreign keys and the like.
+- **Query**: type SQL above the results and press **⌘↵** (Ctrl+Enter) or **▶ Run**. With a selection, only the selected part runs. Several statements separated by `;` run in order, and the results show the last one that returns rows. Table and column names complete as you type.
+- Results show up to 1,000 rows (add `LIMIT`/`OFFSET` or a `WHERE` for others). `NULL` is shown in grey italics. **Open as CSV** puts the rows in a new CSV tab. A long query can be stopped with **Stop**.
+- **Changes are written at once**: there is nothing to save. Each run is its own connection, so `BEGIN … COMMIT` works within one run, and a transaction left open at the end of a run is rolled back.
+- **Save As…** writes a compact copy of the database and switches the tab to it. **Format Document** (⇧⌥F) formats the SQL in the query editor.
+- A database file you can't write to opens **read-only**. Databases in a git repository aren't committed automatically (there is no save).
+
 ## CSV, log and big files
 
 - In CSV files every column keeps its own colour on every line, and the header line is bold. In log files the leading columns (time, level, thread, logger…) are coloured, and error and warning lines are tinted.

@@ -18,6 +18,7 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 use tauri_plugin_single_instance as _;
 
 mod creds;
+mod db;
 mod files;
 mod git_cmds;
 mod gitops;
@@ -411,6 +412,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
             &item("new_of_type", "New File of Type…", Some("CmdOrCtrl+Shift+N"))?,
             &item("open", "Open…", Some("CmdOrCtrl+O"))?,
             &item("open_folder", "Open Folder…", Some("Alt+CmdOrCtrl+O"))?,
+            &item("new_database", "New Database…", None)?,
             &PredefinedMenuItem::separator(app)?,
             &item("open_repo", "Open Repository…", Some("CmdOrCtrl+Shift+O"))?,
             &item("clone_repo", "Clone Repository…", None)?,
@@ -672,7 +674,13 @@ pub fn run() {
             git_cmds::oauth_redirect_uri,
             git_cmds::oauth_device_start,
             git_cmds::oauth_device_poll,
-            git_cmds::oauth_login
+            git_cmds::oauth_login,
+            db::db_probe,
+            db::db_schema,
+            db::db_run,
+            db::db_interrupt,
+            db::db_create,
+            db::db_copy
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

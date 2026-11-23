@@ -33,6 +33,14 @@ Every shortcut in Notepad. On macOS, ⌘ is Command, ⌥ is Option, ⇧ is Shift
 | JSON, XML: source ⇄ tree view | ⌘/ | Ctrl+/ |
 | Format Document (pretty-print) | ⇧⌥F | Shift+Alt+F |
 
+## SQLite databases
+
+| Action | macOS | Windows / Linux |
+|---|---|---|
+| Run the SQL (or the selected part) | ⌘↵ | Ctrl+Enter |
+| Complete a table or column name | ⌃Space or keep typing | Ctrl+Space or keep typing |
+| Create the table (New Table dialog) | ⌘↵ | Ctrl+Enter |
+
 ## Find and replace
 
 | Action | macOS | Windows / Linux |

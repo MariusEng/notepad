@@ -2,6 +2,12 @@
 
 The main changes in each version, newest first.
 
+## 0.15.0 — 2026-11-23
+
+- **SQLite databases**: open `.sqlite` and `.db` files (or any SQLite file) in a tab with their tables and views, a SQL editor that completes table and column names, and a results grid. ⌘↵ (Ctrl+Enter) runs the SQL or the selected part; Stop cancels a long query; Open as CSV copies the results to a new tab.
+- **File → New Database…** creates an empty database, and **New Table…** creates a table from a list of columns (type, key, required, unique, default) or as SQL you can edit first.
+- Right-click a table to insert a SELECT, copy its CREATE statement or drop it. Save As writes a compact copy of the database.
+
 ## 0.14.1 — 2026-11-22
 
 - The download page on deling.1011.no now shows the whole changelog, not just the latest changes.

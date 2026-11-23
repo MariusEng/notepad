@@ -101,6 +101,15 @@ export function StatusBar() {
         <span className="sb-item">Loading…</span>
       </footer>
     );
+  if (tab.kind === "sqlite")
+    return (
+      <footer className="statusbar">
+        <SidebarToggle />
+        <span className="sb-spacer" />
+        <RepoStatus />
+        <span className="sb-item">SQLite database</span>
+      </footer>
+    );
   const wysiwyg = tab.language === "markdown" && !tab.mdSource;
   const preview = tab.language === "html" && !tab.mdSource;
   const words = wysiwyg ? (tab.content.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length : 0;

@@ -38,7 +38,14 @@ export interface Tab {
   unloaded?: boolean;
   /** Bumped when content is replaced from outside the editor (reload, format) to remount it. */
   version: number;
+  /** An SQLite database (db/DbView.tsx) instead of a text file: `content` stays "", nothing is ever written to
+   *  `path` as text, and changes are made by running SQL. */
+  kind?: "sqlite";
+  /** SQLite tabs: the text in the query editor (kept in the session). */
+  query?: string;
 }
+
+export const isDb = (t: Pick<Tab, "kind"> | null | undefined) => t?.kind === "sqlite";
 
 interface TabState {
   tabs: Tab[];

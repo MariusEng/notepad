@@ -161,3 +161,49 @@ export const git = {
 };
 
 export const isMac = navigator.userAgent.includes("Mac");
+
+// ---------------------------------------------------------------- SQLite
+
+export interface DbColumn {
+  name: string;
+  declType: string;
+  notNull: boolean;
+  /** Position in the primary key (1-based); 0 = not part of it. */
+  pk: number;
+  default: string | null;
+}
+export interface DbTable {
+  name: string;
+  kind: "table" | "view";
+  sql: string | null;
+  columns: DbColumn[];
+}
+export interface DbSchema {
+  tables: DbTable[];
+  readOnly: boolean;
+}
+/** A cell: null, number, text, an integer too big for a JS number ({int}), or a blob (size + first bytes as hex). */
+export type DbValue = null | number | string | { int: string } | { blob: number; hex: string };
+export type DbStmtResult =
+  | { kind: "rows"; sql: string; columns: string[]; rows: DbValue[][]; truncated: boolean; changes: number }
+  | { kind: "done"; sql: string; changes: number };
+export interface DbRunResult {
+  results: DbStmtResult[];
+  /** The statement that failed (the ones before it ran). */
+  error: string | null;
+  ms: number;
+}
+
+/** SQLite databases. Every call opens and closes its own connection (db.rs). */
+export const db = {
+  /** True if the file is an SQLite database (by its header). */
+  probe: (path: string) => invoke<boolean>("db_probe", { path }),
+  schema: (path: string) => invoke<DbSchema>("db_schema", { path }),
+  run: (path: string, sql: string, maxRows: number, runId: string) =>
+    invoke<DbRunResult>("db_run", { path, sql, maxRows, runId }),
+  interrupt: (runId: string) => invoke<void>("db_interrupt", { runId }),
+  /** Creates an empty database; an existing file there goes to the Trash. */
+  create: (path: string) => invoke<void>("db_create", { path }),
+  /** Writes a compact copy (VACUUM INTO); an existing file at `dest` goes to the Trash. */
+  copy: (path: string, dest: string) => invoke<void>("db_copy", { path, dest }),
+};

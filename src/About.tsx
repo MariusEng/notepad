@@ -21,6 +21,7 @@ const COMPONENTS: { name: string; use: string; license: string; url: string }[] 
   { name: "OpenSSL", use: "HTTPS for git (macOS and Linux)", license: "Apache-2.0", url: "https://www.openssl.org" },
   { name: "encoding_rs", use: "saving in other text encodings", license: "MIT / Apache-2.0", url: "https://github.com/hsivonen/encoding_rs" },
   { name: "keyring-rs", use: "storing sign-ins in the system keychain", license: "MIT / Apache-2.0", url: "https://github.com/hwchen/keyring-rs" },
+  { name: "SQLite and rusqlite", use: "SQLite databases", license: "Public domain / MIT", url: "https://sqlite.org" },
   { name: "trash", use: "moving deleted files to the Trash", license: "MIT", url: "https://github.com/ArturKovacs/trash" },
   { name: "ureq, url, serde, RustCrypto sha2, base64, getrandom", use: "web requests and data handling", license: "MIT / Apache-2.0", url: "https://crates.io" },
   { name: "Vite and TypeScript", use: "build tools", license: "MIT / Apache-2.0", url: "https://vite.dev" },

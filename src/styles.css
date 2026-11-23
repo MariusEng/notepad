@@ -1112,3 +1112,237 @@ body.resizing-v * {
 .cm-find-scope {
   background: var(--bg-sunken);
 }
+
+/* ---------- SQLite database (db/DbView.tsx) ---------- */
+
+.db-view {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  height: 100%;
+  background: var(--bg);
+}
+.db-schema {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: 13px;
+}
+.db-schema-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.db-ro {
+  font-weight: 400;
+  color: var(--faint);
+}
+.db-schema-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.db-group {
+  margin: 10px 0 2px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.db-table-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px 2px 4px;
+  cursor: default;
+  white-space: nowrap;
+}
+.db-table-row:hover {
+  background: var(--bg-hover);
+}
+.db-caret {
+  width: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--faint);
+  font-size: 10px;
+}
+.db-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.db-cols {
+  margin: 0 0 4px;
+  padding: 0 8px 0 26px;
+  list-style: none;
+  font-size: 12px;
+}
+.db-cols li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+.db-pk {
+  font-weight: 600;
+}
+.db-type {
+  color: var(--faint);
+}
+.db-empty,
+.db-schema .db-error {
+  margin: 6px 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.db-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+}
+.db-main {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+}
+.db-editor {
+  min-height: 0;
+  overflow: hidden;
+}
+.db-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: 12px;
+  cursor: row-resize;
+}
+.db-bar button {
+  cursor: default;
+}
+.db-run {
+  color: var(--accent);
+}
+.db-msg {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.db-faint {
+  color: var(--faint);
+}
+.db-msg.db-error {
+  color: var(--danger);
+}
+.db-results {
+  min-height: 0;
+  overflow: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.db-grid {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+.db-grid th,
+.db-grid td {
+  max-width: 360px;
+  padding: 2px 10px;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+.db-grid th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-subtle);
+  font-weight: 600;
+}
+.db-grid tbody tr:hover {
+  background: var(--active-line);
+}
+.db-grid .db-num {
+  text-align: right;
+  color: var(--syn-number);
+}
+.db-grid .db-null {
+  color: var(--faint);
+  font-style: italic;
+}
+.db-grid .db-rownum {
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.db-more {
+  margin: 8px 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dialog.db-dialog {
+  width: min(640px, calc(100vw - 32px));
+}
+.db-coledit {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.db-coledit th {
+  padding: 4px 4px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  text-align: left;
+}
+.db-coledit td {
+  padding: 2px 4px;
+}
+.db-coledit input:not([type="checkbox"]),
+.db-coledit select {
+  width: 100%;
+  box-sizing: border-box;
+}
+.db-coledit .db-check {
+  text-align: center;
+}
+.db-sql {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  overflow: auto;
+  max-height: 160px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+@media (max-width: 560px) {
+  .db-view {
+    grid-template-columns: 140px 1fr;
+  }
+}

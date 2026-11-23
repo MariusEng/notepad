@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
-import { newTab, saveTabAs } from "./actions";
+import { newDatabase, newTab, saveTabAs } from "./actions";
 import { LANGUAGE_LIST, type LanguageId } from "./editors/languages";
 import { useTabs } from "./tabs/store";
 
@@ -11,8 +11,14 @@ const usePicker = create<{ open: boolean; saveAs: string | null }>(() => ({ open
 export const openTypePicker = () => usePicker.setState({ open: true, saveAs: null });
 /** Save As… (⇧⌘S): choose the file type, then where to save. The current type is preselected. */
 export const openSaveAsPicker = (id = useTabs.getState().activeId) => {
-  if (id && !useTabs.getState().tabs.find((t) => t.id === id)?.loading) usePicker.setState({ open: true, saveAs: id });
+  const tab = useTabs.getState().tabs.find((t) => t.id === id);
+  if (!tab || tab.loading) return;
+  if (tab.kind) void saveTabAs(tab.id); // a database has no other type: straight to the save dialog
+  else usePicker.setState({ open: true, saveAs: tab.id });
 };
+
+/** Not a text type: "New file of type" also offers an SQLite database (File → New Database…). */
+const DATABASE = { id: "sqlite-db", label: "SQLite Database", extensions: ["sqlite", "db"] } as const;
 const close = () => usePicker.setState({ open: false, saveAs: null });
 
 /** A small, keyboard-first list: type to filter, ↑/↓ to move, Enter to create, Esc to cancel. */
@@ -31,9 +37,12 @@ function Picker() {
 
   const items = useMemo(() => {
     const q = query.trim().toLowerCase().replace(/^\./, "");
-    if (!q) return LANGUAGE_LIST;
-    return LANGUAGE_LIST.filter((l) => l.label.toLowerCase().includes(q) || l.extensions.some((e) => e.startsWith(q)));
-  }, [query]);
+    const all = saveAs ? LANGUAGE_LIST : [...LANGUAGE_LIST, DATABASE];
+    if (!q) return all;
+    return all.filter(
+      (l) => l.label.toLowerCase().includes(q) || l.extensions.some((e) => e.startsWith(q)) || (l === DATABASE && "database".startsWith(q)),
+    );
+  }, [query, saveAs]);
 
   useEffect(() => input.current?.focus(), []);
   // Filtering starts at the top; until then the preselected (current) type stays.
@@ -46,9 +55,10 @@ function Picker() {
     list.current?.children[index]?.scrollIntoView({ block: "nearest" });
   }, [index]);
 
-  const choose = (id: LanguageId) => {
+  const choose = (id: LanguageId | typeof DATABASE.id) => {
     close();
-    if (saveAs) void saveTabAs(saveAs, id);
+    if (id === DATABASE.id) void newDatabase();
+    else if (saveAs) void saveTabAs(saveAs, id);
     else newTab(id);
   };
 

@@ -12,6 +12,7 @@ import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
 import { HtmlPreview } from "./editors/HtmlPreview";
 import { DataView } from "./editors/DataView";
+import { DbView } from "./db/DbView";
 import { editorFor } from "./editors/handle";
 import { useTabs } from "./tabs/store";
 import { formatSize } from "./lib/backend";
@@ -86,7 +87,9 @@ function Pane({ id, split }: { id: string; split: boolean }) {
         <div className="pane-fill">
           {tab.loading ? (
             <Loading name={tab.title} {...tab.loading} />
-          ) : tab.unloaded ? null /* being read back from disk (tabs/unload.ts); takes a moment */ :  tab.language === "markdown" && !tab.mdSource ? (
+          ) : tab.unloaded ? null /* being read back from disk (tabs/unload.ts); takes a moment */ : tab.kind === "sqlite" ? (
+            <DbView key={`db:${tab.id}:${tab.version}:${tab.path}`} tab={tab} />
+          ) : tab.language === "markdown" && !tab.mdSource ? (
             <MarkdownEditor key={`md:${tab.id}:${tab.version}`} tab={tab} />
           ) : (tab.language === "json" || tab.language === "xml") && tab.dataView ? (
             <DataView key={`data:${tab.id}:${tab.version}`} tab={tab} />

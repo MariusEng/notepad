@@ -26,6 +26,8 @@ interface SessionTab {
   mdSource: boolean;
   dataView?: boolean;
   preview?: boolean;
+  kind?: "sqlite";
+  query?: string;
   cursor: number;
   scroll: number;
   /** Text is stored in buffers/<id>.txt. */
@@ -88,6 +90,8 @@ async function writeSession() {
       mdSource: t.mdSource,
       dataView: t.dataView || undefined,
       preview: t.preview || undefined,
+      kind: t.kind,
+      query: t.query || undefined,
       cursor: t.cursor,
       scroll: t.scroll,
       buffered: keep.includes(t.id),
@@ -140,6 +144,12 @@ export async function restoreSession(): Promise<boolean> {
       external: undefined,
     };
     try {
+      if (s.kind === "sqlite") {
+        // A database: nothing to read now (DbView reads the schema). Gone: drop the tab.
+        if (!s.path || (await backend.fileMtime(s.path)) === null) continue;
+        tabs.push({ ...base, query: s.query ?? "" });
+        continue;
+      }
       if (s.buffered) {
         const text = await backend.readBuffer(s.id);
         if (text === null) continue;
@@ -221,7 +231,7 @@ export async function checkExternalChanges() {
   const { tabs, update, replaceContent } = useTabs.getState();
   for (const t of tabs) {
     // Unloaded tabs read the current file when they are shown again.
-    if (!t.path || t.loading || t.unloaded) continue;
+    if (!t.path || t.loading || t.unloaded || t.kind) continue; // (databases aren't text)
     const mtime = await backend.fileMtime(t.path).catch(() => null);
     if (mtime === null) {
       if (t.external !== "deleted") update(t.id, { external: "deleted" });

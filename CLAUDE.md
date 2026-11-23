@@ -160,6 +160,17 @@ the features, shortcuts and file layout.
   `edit`/`update` with `dirty` clear `preview`. `opening` map in actions.ts serialises opens of the same path so the
   clicks of a double click never open a file twice. Other ways of opening (File → Open, drop, Finder) are normal tabs.
 
+- SQLite (0.15.0, user request: light query interface, create databases and tables): `src-tauri/src/db.rs` (rusqlite,
+  bundled SQLite; ONE CONNECTION PER CALL, so no lock is held between runs and `BEGIN…COMMIT` only spans one run;
+  `db_run` runs every statement via `Batch`, ≤ 1000 rows each, ints beyond 2^53 as `{int}`, blobs as `{blob,hex}`;
+  `db_interrupt(runId)` stops a run; `db_create` / `db_copy` (VACUUM INTO) trash an existing target, the save dialog
+  already asked). A database tab is `tab.kind === "sqlite"` (`isDb`), language "sql", `content` always "",
+  `tab.query` = editor text (kept in session.json). openOne detects it by the 16-byte header (`db_probe`), not by
+  extension (Thumbs.db etc. stay text). Every text action guards against db tabs (save = no-op, Save As = copy,
+  setLanguage/encodings/EOL ignored, external-change check and unload skip them, session restore doesn't read
+  them). UI `src/db/` (DbView: table list, CodeMirror SQLite + schema completion, results grid; NewTable dialog;
+  sql.ts quoting/CSV/CREATE TABLE). File → New Database… and the ⇧⌘N picker's "SQLite Database" entry.
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -194,8 +205,9 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-22, version 0.14.1)
-Latest (0.14.1): CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
+## Status (2026-11-23, version 0.15.0)
+Latest (0.15.0): SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+`cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
 Not yet checked by eye. 0.12.6: Windows keychain split for long sign-ins; Forgejo provider has no prefilled server (was

@@ -11,6 +11,7 @@ import { installKeymap } from "./keymap";
 import {
   closeTab,
   formatActive,
+  newDatabase,
   newTab,
   openFiles,
   openHelp,
@@ -70,6 +71,7 @@ const MENU: Record<string, () => unknown> = {
     if (!ed?.selectColumn?.()) useTabs.getState().notify("Select Column works in CSV and log files (with columns).");
   },
   format: formatActive,
+  new_database: newDatabase,
   open_folder: openFolder,
   open_repo: openRepoFolder,
   new_repo: () => openDialog({ kind: "newRepo" }),

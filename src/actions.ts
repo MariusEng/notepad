@@ -1,11 +1,11 @@
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import helpText from "./help.md?raw";
 import shortcutsText from "../SHORTCUTS.md?raw";
-import { LARGE_FILE_BYTES, backend, type FileData } from "./lib/backend";
+import { LARGE_FILE_BYTES, backend, db, type FileData } from "./lib/backend";
 import { ENCODINGS, bomFor, encodingName } from "./editors/encodings";
 import { activeEditor, flushEdits } from "./editors/handle";
 import { LANGUAGES, LANGUAGE_LIST, detectLanguage, fileName, hasDataView, hasRenderedView, type LanguageId } from "./editors/languages";
-import { activeTab, newId, useTabs, type Eol, type Tab } from "./tabs/store";
+import { activeTab, isDb, newId, useTabs, type Eol, type Tab } from "./tabs/store";
 import { ensureLoaded } from "./tabs/unload";
 
 const store = () => useTabs.getState();
@@ -66,9 +66,58 @@ function nextUntitledName(language: LanguageId): string {
   return `Untitled-${n}.${LANGUAGES[language].extensions[0]}`;
 }
 
-/** Cmd/Ctrl+N: a new, empty Markdown document. */
-export function newTab(language: LanguageId = "markdown") {
-  store().addTab(baseTab({ title: nextUntitledName(language), language, mdSource: language === "html" }));
+/** Cmd/Ctrl+N: a new, empty Markdown document. `content` fills it (e.g. query results opened as CSV). */
+export function newTab(language: LanguageId = "markdown", content = "") {
+  store().addTab(baseTab({ title: nextUntitledName(language), language, mdSource: language === "html", content }));
+}
+
+// ---------------------------------------------------------------- SQLite
+
+/** Extensions offered for databases in the save dialogs (opening goes by the file header, not the name). */
+const DB_EXTENSIONS = ["sqlite", "sqlite3", "db", "db3", "s3db"];
+
+/** A tab showing an SQLite database (db/DbView.tsx). */
+const dbTab = (path: string, preview?: boolean) =>
+  baseTab({ path, title: fileName(path), language: "sql", kind: "sqlite", query: "", preview });
+
+/** File → New Database…: creates an empty SQLite database where the user chooses and opens it. */
+export async function newDatabase() {
+  const path = await save({
+    title: "New Database",
+    defaultPath: "Untitled.sqlite",
+    filters: [{ name: "SQLite Database", extensions: DB_EXTENSIONS }],
+  });
+  if (!path) return;
+  try {
+    await db.create(path);
+  } catch (e) {
+    store().notify(`Could not create ${fileName(path)}: ${e}`, "error");
+    return;
+  }
+  const open = store().tabs.find((t) => t.path === path);
+  if (open && !open.dirty) {
+    // It replaced a file that was open: show the new, empty database in that tab.
+    store().replaceContent(open.id, "", { kind: "sqlite", language: "sql", query: open.query ?? "", mtime: null, external: undefined });
+    store().setActive(open.id);
+  } else await openFiles([path]);
+}
+
+/** Save As for a database: a compact copy (VACUUM INTO) that the tab then shows. */
+async function saveDbAs(tab: Tab): Promise<boolean> {
+  const dest = await save({
+    title: "Save Database As",
+    defaultPath: tab.path ?? tab.title,
+    filters: [{ name: "SQLite Database", extensions: DB_EXTENSIONS }],
+  });
+  if (!dest || dest === tab.path) return false;
+  try {
+    await db.copy(tab.path!, dest);
+  } catch (e) {
+    store().notify(`Could not save ${fileName(dest)}: ${e}`, "error");
+    return false;
+  }
+  store().replaceContent(tab.id, "", { path: dest, title: fileName(dest), preview: undefined });
+  return true;
 }
 
 export interface OpenOptions {
@@ -119,6 +168,11 @@ async function openOne(path: string, opts: OpenOptions) {
     const oldPreview = opts.preview ? store().tabs.find((t) => t.preview && !t.dirty) : undefined;
     const replaceId = oldPreview?.id ?? (cur && isPristine(cur) ? cur.id : undefined);
     const preview = opts.preview && !opts.pin ? true : undefined;
+    // SQLite databases are recognised by their header, whatever they are called.
+    if (await db.probe(path)) {
+      store().addTab(dbTab(path, preview), { replaceId });
+      return;
+    }
     if (size > LARGE_FILE_BYTES) {
       // Big file: the tab appears at once and shows progress while the text streams in.
       const tab = baseTab({ path, title: fileName(path), language: detectLanguage(path), loading: { loaded: 0, total: size }, preview });
@@ -185,6 +239,7 @@ export async function saveTab(id = store().activeId): Promise<boolean> {
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return false;
+  if (isDb(tab)) return true; // every statement is written to the database when it runs
   if (!tab.path) return saveTabAs(tab.id);
   try {
     if (tab.lossy) {
@@ -216,6 +271,7 @@ export async function saveTabAs(id = store().activeId, language?: LanguageId): P
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab || tab.loading) return false;
+  if (isDb(tab)) return saveDbAs(tab);
   const chosen = language ?? tab.language;
   const lang = LANGUAGES[chosen];
   const ext = lang.extensions[0];
@@ -277,6 +333,7 @@ export async function closeOtherTabs(keepId: string, onlyRight = false) {
 export async function reloadTab(id: string) {
   const tab = store().tabs.find((t) => t.id === id);
   if (!tab?.path) return;
+  if (isDb(tab)) return store().replaceContent(id, "", { external: undefined }); // remount: reads the schema again
   if ((await backend.fileSize(tab.path).catch(() => 0)) > LARGE_FILE_BYTES) {
     store().update(id, { loading: { loaded: 0, total: 1 } });
     return loadFileInto(id, tab.path, readEncodingOf(tab));
@@ -296,7 +353,7 @@ export async function setLanguage(id: string, language: LanguageId) {
   await ensureLoaded(id);
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab || tab.language === language) return;
+  if (!tab || isDb(tab) || tab.language === language) return;
   const patch: Partial<Tab> = { language };
   if (language === "html") patch.mdSource = true; // edit first; the preview is one ⌘/ away
   const untitled = tab.path === null && /^(Untitled-\d+)\.[^.]*$/.exec(tab.title);
@@ -307,7 +364,7 @@ export async function setLanguage(id: string, language: LanguageId) {
 export async function toggleEol(id: string) {
   await ensureLoaded(id);
   const tab = store().tabs.find((t) => t.id === id);
-  if (tab) store().update(id, { eol: tab.eol === "\n" ? "\r\n" : "\n", dirty: true });
+  if (tab && !isDb(tab)) store().update(id, { eol: tab.eol === "\n" ? "\r\n" : "\n", dirty: true });
 }
 
 /** Markdown: formatted editor ⇄ source. HTML: preview ⇄ source. JSON, XML: source ⇄ tree view. (⌘/ · Ctrl+/) */
@@ -327,6 +384,16 @@ export async function formatActive() {
   const tab = activeTab();
   if (!tab || tab.loading) return;
   const { formatText, FormatError } = await import("./editors/languages/format");
+  if (isDb(tab)) {
+    // A database: format the SQL in its query editor.
+    try {
+      const formatted = await formatText("sql", tab.query ?? "");
+      if (formatted !== (tab.query ?? "")) activeEditor()?.replaceAll(formatted);
+    } catch (e) {
+      store().notify(e instanceof FormatError ? e.message : `Format failed: ${e}`, "error");
+    }
+    return;
+  }
   try {
     const formatted = await formatText(tab.language, tab.content);
     if (formatted === tab.content) {
@@ -357,7 +424,7 @@ function openDoc(title: string, content: string) {
 export async function reopenWithEncoding(id: string, encoding: string) {
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab?.path || tab.loading) return;
+  if (!tab?.path || tab.loading || isDb(tab)) return;
   if (tab.dirty) {
     const ok = await ask(`Reopening ${tab.title} as ${encodingName(encoding)} discards your unsaved changes.`, {
       title: "Reopen with encoding",
@@ -376,7 +443,7 @@ export async function saveWithEncoding(id: string, encoding: string) {
   await ensureLoaded(id);
   flushEdits();
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab || tab.loading) return;
+  if (!tab || tab.loading || isDb(tab)) return;
   const before = { encoding: tab.encoding, bom: tab.bom, dirty: tab.dirty };
   store().update(id, { encoding, bom: bomFor(encoding, tab.bom), dirty: true });
   if (!tab.path) return;
@@ -387,7 +454,7 @@ export async function saveWithEncoding(id: string, encoding: string) {
 export async function toggleBom(id: string) {
   await ensureLoaded(id);
   const tab = store().tabs.find((t) => t.id === id);
-  if (tab && tab.encoding === "utf-8") store().update(id, { bom: !tab.bom, dirty: true });
+  if (tab && !isDb(tab) && tab.encoding === "utf-8") store().update(id, { bom: !tab.bom, dirty: true });
 }
 
 /** File → Encoding, the tab menu and the status bar: reopen or save with an encoding. */
@@ -426,7 +493,7 @@ export function encodingMenuItems(tab: Tab) {
 
 export async function showEncodingMenu(id = store().activeId) {
   const tab = store().tabs.find((t) => t.id === id);
-  if (!tab) return;
+  if (!tab || isDb(tab)) return;
   const { Menu } = await import("@tauri-apps/api/menu");
   const menu = await Menu.new({ items: encodingMenuItems(tab) });
   await menu.popup();

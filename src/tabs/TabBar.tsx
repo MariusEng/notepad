@@ -23,20 +23,7 @@ async function showTabMenu(tab: Tab) {
       { id: "close", text: "Close", action: () => closeTab(tab.id) },
       { id: "close-others", text: "Close Others", action: () => closeOtherTabs(tab.id) },
       { id: "close-right", text: "Close to the Right", action: () => closeOtherTabs(tab.id, true) },
-      { item: "Separator" },
-      {
-        id: "file-type",
-        text: "File Type",
-        items: LANGUAGE_LIST.map((l) => ({
-          id: `type-${l.id}`,
-          text: l.label,
-          checked: l.id === tab.language,
-          action: () => setLanguage(tab.id, l.id),
-        })),
-      },
-      { id: "encoding", text: "Encoding", items: encodingMenuItems(tab) },
-      { item: "Separator" },
-      { id: "save", text: "Save", action: () => saveTab(tab.id) },
+      ...(tab.kind ? [{ item: "Separator" as const }] : textFileItems(tab)),
       {
         id: "copy-path",
         text: "Copy Path",
@@ -46,6 +33,26 @@ async function showTabMenu(tab: Tab) {
     ],
   });
   await menu.popup();
+}
+
+/** File type, encoding and Save: only for text files (not databases). */
+function textFileItems(tab: Tab) {
+  return [
+    { item: "Separator" as const },
+    {
+      id: "file-type",
+      text: "File Type",
+      items: LANGUAGE_LIST.map((l) => ({
+      id: `type-${l.id}`,
+      text: l.label,
+      checked: l.id === tab.language,
+      action: () => setLanguage(tab.id, l.id),
+      })),
+    },
+    { id: "encoding", text: "Encoding", items: encodingMenuItems(tab) },
+    { item: "Separator" as const },
+    { id: "save", text: "Save", action: () => saveTab(tab.id) },
+  ];
 }
 
 /** Tabs shown side by side (split view) form one group; every other tab is a group of one. */

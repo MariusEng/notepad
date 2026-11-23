@@ -73,6 +73,11 @@ Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 - **Branches**: click the repository name (sidebar) or the branch (status bar) to switch branch, create one,
   or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
   unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
+- **SQLite databases**: open `.sqlite`/`.db` files (recognised by their header), or File → New Database…. Tables and
+  views on the left (click: rows, ▸: columns, right-click: Insert SELECT / Copy CREATE / Drop), a SQL editor with
+  table/column completion (⌘↵ runs it or the selection, Stop cancels), results grid (first 1,000 rows, Open as CSV),
+  New Table dialog (types, key, NOT NULL, UNIQUE, defaults; or Edit as SQL). Changes are written at once (rusqlite,
+  bundled SQLite; one connection per run, `src-tauri/src/db.rs`).
 - **Tabs**: drag to reorder (the two tabs of a split view sit together at the right end of the tab bar), middle-click to close, right-click for more, including **File Type**
   to change the type of a tab (an untitled file also gets the new extension).
 - **New file of a type** (⇧⌘N): pick Markdown, SQL, PowerShell, … and get `Untitled-N.<ext>`.
@@ -149,6 +154,7 @@ src/
   editors/blockSelect.ts   column selection (mouse + keyboard)
   editors/FindPanel.tsx    find and replace panel (CodeMirror search state, find in selection)
   editors/encodings.ts     encodings offered in File → Encoding
+  db/                   SQLite tab: DbView (tables, query editor, results), New Table dialog, SQL helpers
   About.tsx             About dialog with the open source components
   theme/                design tokens (light/dark) and OS theme following
 .forgejo/workflows/    release builds for Linux and Windows (Forgejo Actions)
@@ -158,6 +164,7 @@ scripts/release-mac.sh  build the macOS dmg, attach it to the release, republish
 scripts/ci-image.sh     build + push the Linux CI image (ci/linux.Containerfile) to git.1011.no's registry
 scripts/ci-log.sh       read the build logs the workflow attaches to the draft release "CI logs"
 src-tauri/src/lib.rs    file I/O, state files, menu, quit handling, external formatters
+src-tauri/src/db.rs     SQLite: schema, run SQL (interruptible), create, Save As copy (VACUUM INTO)
 src-tauri/src/files.rs  folder browser: list, create file/folder, "is this path in git?"
 src-tauri/src/gitops.rs libgit2: open, list, commit one file, sync (fetch/merge/push), clone
 src-tauri/src/creds.rs  credentials: keychain, then the git credential helper; token refresh
