@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.17.1 — 2026-11-23
+
+- Updates now come from GitHub Releases.
+
 ## 0.17.0 — 2026-11-23
 
 - **Updates**: Help → Check for Updates…, and Notepad looks for a new version by itself once a day ("Update to …" in the status bar). Install and Restart downloads, checks and installs it, and your tabs come back.

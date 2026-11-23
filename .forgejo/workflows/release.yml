@@ -272,8 +272,8 @@ jobs:
         with:
           path: dist-release
 
-      # latest.json for the app's updater (Help → Check for Updates), published on deling.1011.no: this version's
-      # changelog and the signed files (URLs on deling).
+      # latest.json for the app's updater (Help → Check for Updates), on the GitHub release: this version's changelog
+      # and the signed files (URLs on GitHub).
       # The signatures go into it; the .sig files themselves aren't published.
       - name: Update manifest
         if: steps.decide.outputs.publish == 'true'
@@ -304,7 +304,8 @@ jobs:
           RELEASE_TARGET: ${{ github.sha }}
         run: |
           exec > >(tee -a /tmp/ci.log) 2>&1
-          RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/github-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
+          # latest.json last; the release is a draft until everything is there (see github-release.sh).
+          RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/github-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/* /tmp/updater/latest.json
 
       # Friends download from https://deling.1011.no/notepad: every platform in one release.
       - name: Publish on deling.1011.no
@@ -315,9 +316,10 @@ jobs:
           exec > >(tee -a /tmp/ci.log) 2>&1
           # Intro, downloads and the whole changelog, so the page grows with every release.
           scripts/release-notes.sh deling "${{ steps.decide.outputs.tag }}" > /tmp/deling-readme.md
-          # With latest.json and the macOS .app.tar.gz: the app's updater reads them from here
-          # (https://deling.1011.no/notepad/last-ned/latest.json). One release replaces the last as a whole.
-          scripts/deling-publish.sh "${{ steps.decide.outputs.tag }}" /tmp/deling-readme.md dist-release/*/* /tmp/updater/latest.json
+          # Without the updater's .app.tar.gz (the dmg is for people). latest.json is only there for 0.17.0, which checked
+          # deling for updates; its links point to GitHub. Drop it once nobody runs 0.17.0.
+          scripts/deling-publish.sh "${{ steps.decide.outputs.tag }}" /tmp/deling-readme.md \
+            $(ls dist-release/*/* | grep -v '\.app\.tar\.gz$') /tmp/updater/latest.json
 
       - name: Upload build log
         if: always()

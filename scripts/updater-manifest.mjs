@@ -3,9 +3,9 @@
 //
 //   node scripts/updater-manifest.mjs <tag> <notes file> <folder with the files and their .sig> > latest.json
 //
-// It is published on deling.1011.no with the release's files (deling replaces a release as a whole, so latest.json
-// and the files it names always appear together); the app reads https://deling.1011.no/notepad/last-ned/latest.json
-// (tauri.conf.json → plugins.updater) and downloads from the same folder. The updater looks for "<os>-<arch>-<bundle type>" first, then "<os>-<arch>":
+// It is uploaded last to the GitHub release (published only when complete); the app reads
+// https://github.com/MariusEng/notepad/releases/latest/download/latest.json (tauri.conf.json → plugins.updater) and
+// downloads from that release. A copy also goes to deling.1011.no for 0.17.0, which looked there. The updater looks for "<os>-<arch>-<bundle type>" first, then "<os>-<arch>":
 //   macOS   Notepad_<v>_aarch64.app.tar.gz   darwin-aarch64(-app)
 //   Windows Notepad_<v>_x64-setup.exe        windows-x86_64(-nsis)
 //   Linux   .AppImage / .deb / .rpm          linux-x86_64-appimage, -deb, -rpm
@@ -18,7 +18,7 @@ if (!tag || !notesFile || !dir) {
   console.error("usage: updater-manifest.mjs <tag> <notes file> <folder>");
   process.exit(1);
 }
-const base = process.env.UPDATE_BASE_URL || "https://deling.1011.no/notepad/last-ned/";
+const base = process.env.UPDATE_BASE_URL || `https://github.com/MariusEng/notepad/releases/download/${tag}/`;
 
 /** Every file under `dir` (the release job has one subfolder per build). */
 const files = (d) => readdirSync(d).flatMap((n) => (statSync(join(d, n)).isDirectory() ? files(join(d, n)) : [join(d, n)]));

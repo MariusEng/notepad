@@ -85,8 +85,8 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
 - **Branches**: click the repository name (sidebar) or the branch (status bar) to switch branch, create one,
   or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
   unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
-- **Updates**: Help → Check for Updates… and a daily check (status bar "Update to …"); downloads from
-  deling.1011.no/notepad, verifies the signature, installs, restarts with the session restored (tauri-plugin-updater; see Releases).
+- **Updates**: Help → Check for Updates… and a daily check (status bar "Update to …"); downloads from GitHub
+  Releases, verifies the signature, installs, restarts with the session restored (tauri-plugin-updater; see Releases).
 - **SQLite databases**: open `.sqlite`/`.db` files (recognised by their header), or File → New Database…. Tables and
   views on the left (click: rows, ▸: columns, right-click: Insert SELECT / Copy CREATE / Drop), a SQL editor with
   table/column completion (⌘↵ runs it or the selection, Stop cancels), results grid (first 1,000 rows, Open as CSV),
@@ -110,8 +110,9 @@ All shortcuts, for macOS and Windows/Linux, are in **[SHORTCUTS.md](SHORTCUTS.md
 **Updates** (0.17.0): CI builds sign the update files (secrets TAURI_SIGNING_PRIVATE_KEY and
 TAURI_SIGNING_PRIVATE_KEY_PASSWORD; backup in the Mac's login keychain as `notepad-updater-private-key` /
 `notepad-updater-key-password`; the public key is in tauri.conf.json). The release job writes `latest.json`
-(`scripts/updater-manifest.mjs`) and publishes it with the files on deling.1011.no; the app reads
-`https://deling.1011.no/notepad/last-ned/latest.json` and downloads from there. Losing the key means users must reinstall by hand once. Local builds don't
+(`scripts/updater-manifest.mjs`) and uploads it last to the GitHub release, which stays a draft until all files are
+there; the app reads `releases/latest/download/latest.json`. A copy also goes to deling for 0.17.0 installs (0.17.0
+looked there). Losing the key means users must reinstall by hand once. Local builds don't
 make update files (`createUpdaterArtifacts` is only turned on in CI with `--config`).
 
 **GitHub** (0.16.1): git.1011.no is the main repository; github.com/MariusEng/notepad is a copy. A GitHub App (no

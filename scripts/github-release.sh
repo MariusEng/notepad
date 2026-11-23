@@ -28,11 +28,15 @@ auth=(-H "Authorization: Bearer $GH_RELEASE_TOKEN" -H "Accept: application/vnd.g
 
 json_field() { python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('$1','') if isinstance(d,dict) else '')"; }
 
-id=$(curl -fsS "${auth[@]}" "$api/releases/tags/$tag" 2>/dev/null | json_field id || true)
+# A new release starts as a draft and is published after its files are uploaded, so it never shows as "latest"
+# without latest.json (the app's updater reads releases/latest/download/latest.json). Drafts aren't found by tag, so
+# look through the recent releases (also finds a draft left by a failed run).
+id=$(curl -fsS "${auth[@]}" "$api/releases?per_page=30" |
+  python3 -c "import json,sys; print(next((str(r['id']) for r in json.load(sys.stdin) if r['tag_name']==sys.argv[1]), ''))" "$tag")
 if [ -z "$id" ]; then
   body=$(python3 -c "
 import json,os,sys
-r={'tag_name': sys.argv[1], 'name': 'Notepad ' + sys.argv[1].lstrip('v'), 'body': os.environ.get('RELEASE_NOTES', '')}
+r={'tag_name': sys.argv[1], 'name': 'Notepad ' + sys.argv[1].lstrip('v'), 'body': os.environ.get('RELEASE_NOTES', ''), 'draft': True}
 if os.environ.get('RELEASE_TARGET'): r['target_commitish']=os.environ['RELEASE_TARGET']
 print(json.dumps(r))" "$tag")
   id=$(curl -fsS "${auth[@]}" -d "$body" "$api/releases" | json_field id)
@@ -49,4 +53,9 @@ for f in "$@"; do
   curl -fsS "${auth[@]}" -H "Content-Type: application/octet-stream" --data-binary "@$f" \
     "https://uploads.github.com/repos/$repo/releases/$id/assets?name=$enc" >/dev/null
 done
+draft=$(curl -fsS "${auth[@]}" "$api/releases/$id" | json_field draft)
+if [ "$draft" = "True" ]; then
+  curl -fsS -X PATCH "${auth[@]}" -d '{"draft": false, "make_latest": "true"}' "$api/releases/$id" >/dev/null
+  echo "published"
+fi
 echo "https://github.com/$repo/releases/tag/$tag"

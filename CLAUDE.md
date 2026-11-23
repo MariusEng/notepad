@@ -207,15 +207,15 @@ the features, shortcuts and file layout.
 - Updates (0.17.0, user request; Help → Check for Updates…, user wants it in the Help menu on all platforms):
   tauri-plugin-updater + plugin-process, `src/updates.tsx` (manual check = dialog; auto check 15 s after launch and
   daily if settings.autoUpdates → status bar "Update to X"; install = saveSessionNow → downloadAndInstall → relaunch).
-  Endpoint https://deling.1011.no/notepad/last-ned/latest.json (user's choice: updates come from deling, not
-  GitHub; deling serves release files at /notepad/last-ned/<name> and replaces a release as a whole, so latest.json
-  and its files appear together). Minisign key: Forgejo secrets TAURI_SIGNING_PRIVATE_KEY(+_PASSWORD), backup in the login keychain
+  Endpoint https://github.com/MariusEng/notepad/releases/latest/download/latest.json (user's final choice: GitHub; 0.17.0
+  alone was built with https://deling.1011.no/notepad/last-ned/latest.json, so deling still gets a copy of
+  latest.json with GitHub URLs until nobody runs 0.17.0). github-release.sh creates new releases as DRAFTS and
+  publishes them after the uploads, so "latest" never lacks latest.json. Minisign key: Forgejo secrets TAURI_SIGNING_PRIVATE_KEY(+_PASSWORD), backup in the login keychain
   (services notepad-updater-private-key / notepad-updater-key-password), pubkey in tauri.conf.json. CI passes
   `--config '{"bundle":{"createUpdaterArtifacts":true}}'` (local builds stay keyless). Release job: updater-manifest.mjs
   → latest.json (darwin-aarch64[-app] = renamed Notepad_<v>_aarch64.app.tar.gz, windows-x86_64[-nsis] = setup.exe,
-  linux-x86_64-appimage/-deb/-rpm; NO plain linux key), .sig deleted, deling gets everything incl. latest.json and
-  the .app.tar.gz (GitHub gets the files but no latest.json). Deling downloads are Norway-only by default
-  (international=false): updates outside Norway would fail. Why it helps on macOS: the app downloads with its own HTTP client, so no quarantine xattr →
+  linux-x86_64-appimage/-deb/-rpm; NO plain linux key), .sig deleted, latest.json uploaded last to GitHub;
+  deling gets the files minus .app.tar.gz, plus latest.json for 0.17.0. Why it helps on macOS: the app downloads with its own HTTP client, so no quarantine xattr →
   no Gatekeeper prompt. Keychain items made by an ad-hoc signed build may still ask "allow access" after an update.
 
 ## Gotchas found so far
@@ -252,8 +252,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.17.0)
-Latest (0.17.0): auto updates (not yet seen working: the first real update is 0.17.0 → the next version). 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.17.1)
+Latest (0.17.1): updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

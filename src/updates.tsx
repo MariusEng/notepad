@@ -5,7 +5,7 @@ import { useSettings } from "./settings";
 
 /**
  * Updates: Help → Check for Updates…, and (unless turned off) a quiet check at launch and once a day. The app reads
- * https://deling.1011.no/notepad/last-ned/latest.json (tauri.conf.json → plugins.updater), checks the signature of the
+ * latest.json from the newest GitHub release (tauri.conf.json → plugins.updater), checks the signature of the
  * download against the public key in tauri.conf.json, installs it and restarts. The session is saved first (hot exit),
  * so tabs and unsaved edits come back.
  *
