@@ -212,7 +212,7 @@ jobs:
         id: decide
         run: |
           exec > >(tee -a /tmp/ci.log) 2>&1
-          command -v python3 >/dev/null || { apt-get update && apt-get install -y --no-install-recommends python3; }
+          { command -v python3 && command -v openssl; } >/dev/null || { apt-get update && apt-get install -y --no-install-recommends python3 openssl; }
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             tag="${GITHUB_REF#refs/tags/}"
           else
@@ -256,6 +256,18 @@ jobs:
           exec > >(tee -a /tmp/ci.log) 2>&1
           ls -laR dist-release
           RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/forgejo-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
+
+      # The same release on https://github.com/MariusEng/notepad, with a token from the GitHub App (the code gets
+      # there with the github-mirror workflow; see scripts/github-setup.sh). Skipped while the secrets aren't set.
+      - name: Publish on GitHub
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          RELEASE_TARGET: ${{ github.sha }}
+        run: |
+          exec > >(tee -a /tmp/ci.log) 2>&1
+          RELEASE_NOTES="$(cat /tmp/notes.md)" scripts/github-release.sh "${{ steps.decide.outputs.tag }}" dist-release/*/*
 
       # Friends download from https://deling.1011.no/notepad: every platform in one release.
       - name: Publish on deling.1011.no

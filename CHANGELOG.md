@@ -2,6 +2,11 @@
 
 The main changes in each version, newest first.
 
+## 0.16.1 — 2026-11-23
+
+- Notepad is also on GitHub: [github.com/MariusEng/notepad](https://github.com/MariusEng/notepad), with the same downloads under Releases.
+- Notepad is open source under the MIT license.
+
 ## 0.16.0 — 2026-11-23
 
 - **Open files from a terminal** on macOS: Notepad → Install Command Line Tool… adds the `notepad` command, so `notepad file.txt` opens the file in Notepad. A file that doesn't exist yet opens as a new, empty tab, and saving creates it.

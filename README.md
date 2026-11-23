@@ -6,6 +6,15 @@ you edit formatted text, and the file on disk stays plain `.md`.
 Built with [Tauri 2](https://tauri.app) (Rust) + React + TypeScript,
 [Milkdown](https://milkdown.dev) for Markdown and [CodeMirror 6](https://codemirror.net) for everything else.
 
+Downloads: [GitHub Releases](https://github.com/MariusEng/notepad/releases) (macOS Apple Silicon, Windows, Linux).
+The macOS app isn't notarised: the first time, open it via System Settings → Privacy & Security → Open Anyway.
+
+**License:** MIT (see [LICENSE](LICENSE)).
+
+**Contributing:** pull requests are welcome on [GitHub](https://github.com/MariusEng/notepad/pulls). The GitHub
+repository is a mirror of the main repository on git.1011.no, so pull requests are merged there and then show up
+here as merged; please don't be surprised that GitHub's merge button isn't used.
+
 ## Features
 
 - **Formatted Markdown editing**: select text for a floating toolbar, type `/` for blocks
@@ -95,6 +104,16 @@ All shortcuts, for macOS and Windows/Linux, are in **[SHORTCUTS.md](SHORTCUTS.md
 **Help → Keyboard Shortcuts**. Keep that file up to date when a shortcut is added or changed.
 
 ## Development
+
+**GitHub** (0.16.1): git.1011.no is the main repository; github.com/MariusEng/notepad is a copy. A GitHub App (no
+personal token) gives the CI one-hour tokens (`scripts/github-token.sh`): the `github-mirror` workflow pushes every
+branch and tag to GitHub after each push, and the release job also publishes a GitHub Release
+(`scripts/github-release.sh`). Setup: create the app (Contents and Workflows: Read and write, no webhook, only this
+account), install it on MariusEng/notepad, generate a private key, then `scripts/github-setup.sh <app id> <key.pem>`
+stores the Forgejo secrets GH_APP_ID and GH_APP_PRIVATE_KEY. Pull requests from GitHub:
+`scripts/github-pr.sh list | show <n> | merge <n>` merges locally and pushes to git.1011.no; never merge on GitHub
+(the mirror overwrites GitHub's branches).
+
 
 Requirements: Node.js 20+, Rust (stable), and the
 [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS.

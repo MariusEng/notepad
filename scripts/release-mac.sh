@@ -28,6 +28,8 @@ npx tauri build --bundles app,dmg
 dmg=$(ls src-tauri/target/release/bundle/dmg/Notepad_"${version}"_*.dmg)
 FORGEJO_TOKEN="$token" scripts/forgejo-release.sh "$tag" "$dmg"
 echo "Attached $(basename "$dmg") to $url/$repo/releases/tag/$tag"
+# GitHub too, with your GitHub CLI sign-in (gh); without it, it says so and goes on.
+scripts/github-release.sh "$tag" "$dmg"
 
 # deling.1011.no replaces a release as a whole, so publish every file of this version there again, now with the dmg.
 work=$(mktemp -d)

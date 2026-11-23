@@ -1,0 +1,41 @@
+# Copies every branch and tag to https://github.com/MariusEng/notepad after each push, with a short-lived token from
+# the GitHub App (secrets GH_APP_ID, GH_APP_PRIVATE_KEY; see scripts/github-setup.sh). git.1011.no is the main
+# repository: branches on GitHub are overwritten with git.1011.no's (force), so pull requests are merged here
+# (scripts/github-pr.sh), never on GitHub. Skipped with a message while the secrets aren't set.
+name: github-mirror
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - name: Push to GitHub
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SRC: ${{ github.server_url }}/${{ github.repository }}.git
+        run: |
+          if [ -z "$GH_APP_ID" ] || [ -z "$GH_APP_PRIVATE_KEY" ]; then
+            echo "GH_APP_ID / GH_APP_PRIVATE_KEY aren't set: not copying to GitHub (see scripts/github-setup.sh)"
+            exit 0
+          fi
+          command -v python3 >/dev/null && command -v openssl >/dev/null ||
+            { apt-get update -qq && apt-get install -y -qq --no-install-recommends python3 openssl >/dev/null; }
+          git init -q mirror && cd mirror
+          src_auth=$(printf 'x-access-token:%s' "$FORGEJO_TOKEN" | base64 -w0)
+          # All branches and tags of git.1011.no (a bare fetch: no checkout needed).
+          git -c http.extraheader="Authorization: basic $src_auth" fetch -q "$SRC" \
+            '+refs/heads/*:refs/mirror/*' '+refs/tags/*:refs/tags/*'
+          git show refs/mirror/main:scripts/github-token.sh >/tmp/github-token.sh
+          token=$(bash /tmp/github-token.sh)
+          gh_auth=$(printf 'x-access-token:%s' "$token" | base64 -w0)
+          git -c http.extraheader="Authorization: basic $gh_auth" push --force https://github.com/MariusEng/notepad.git \
+            '+refs/mirror/*:refs/heads/*' '+refs/tags/*:refs/tags/*'

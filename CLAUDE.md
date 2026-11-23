@@ -179,6 +179,16 @@ the features, shortcuts and file layout.
   clean tab with that path and mtime null (checkExternalChanges skips mtime-null tabs). Windows: not done, and
   `notepad` there is Microsoft's notepad.exe (System32 comes first on PATH).
 
+- GitHub (0.16.1, user request): public copy https://github.com/MariusEng/notepad (gh CLI is logged in as MariusEng).
+  The user wanted a GITHUB APP, not tokens. An app only gives 1-hour installation tokens, so no Forgejo push mirror:
+  `.forgejo/workflows/github-mirror.yml` (every push; fetches all heads into refs/mirror/*, `git push --force`
+  heads + tags) and the release job's "Publish on GitHub" (scripts/github-release.sh; on the Mac it falls back to
+  `gh auth token`) mint tokens with scripts/github-token.sh (JWT via openssl, secrets GH_APP_ID, GH_APP_PRIVATE_KEY;
+  missing → skipped). scripts/github-setup.sh <app id> <pem> is run by the user (key never in the chat); it also
+  deletes an old push mirror. GitHub is overwritten → NEVER merge there. GitHub PRs: scripts/github-pr.sh show/merge
+  <n> (refs/pull/n/head, --no-ff merge on main, push to git.1011.no; GitHub then marks the PR merged). Still bump
+  version + CHANGELOG for merged PRs. License: MIT (LICENSE, user's choice).
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -213,8 +223,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.16.0)
-Latest (0.16.0): `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.16.1)
+Latest (0.16.1): GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

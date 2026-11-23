@@ -43,7 +43,8 @@ export function AboutDialog() {
       <div className="dialog about" role="dialog" aria-label="About Notepad" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && close()} tabIndex={-1} ref={(el) => el?.focus()}>
         <h2>Notepad {version}</h2>
         <p className="note">
-          A minimal notepad with formatted Markdown, syntax highlighting and git sync.
+          A minimal notepad with formatted Markdown, syntax highlighting and git sync. Open source under the MIT
+          license.
           <br />
           Built with <b>Claude</b> by Anthropic, using{" "}
           <a href="https://claude.com/claude-code" onClick={link("https://claude.com/claude-code")}>
