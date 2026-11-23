@@ -1,0 +1,52 @@
+# Tests every pull request before it can be merged into main (branch protection requires "ci / test"):
+# typecheck, frontend build, Rust tests. Pull requests from GitHub come from the bot account's fork, so Forgejo
+# runs this only after a maintainer approves it, without the repository's secrets.
+#
+# It runs on the Linux docker runner only (a container), never on the Mac runner, which runs jobs directly on the
+# Mac. A pull request that edits this file can change that: read workflow changes before approving.
+name: ci
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: never
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: System packages
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            build-essential curl file pkg-config perl \
+            libwebkit2gtk-4.1-dev libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev >/dev/null
+
+      - name: Rust
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal -q
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (frontend)
+        run: npm run build
+
+      - name: Rust tests
+        run: cd src-tauri && cargo test

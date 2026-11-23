@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.16.2 — 2026-11-23
+
+- Pull requests on GitHub are now tested automatically on git.1011.no before they are merged.
+
 ## 0.16.1 — 2026-11-23
 
 - Notepad is also on GitHub: [github.com/MariusEng/notepad](https://github.com/MariusEng/notepad), with the same downloads under Releases.

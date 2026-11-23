@@ -12,8 +12,8 @@ The macOS app isn't notarised: the first time, open it via System Settings → P
 **License:** MIT (see [LICENSE](LICENSE)).
 
 **Contributing:** pull requests are welcome on [GitHub](https://github.com/MariusEng/notepad/pulls). The GitHub
-repository is a mirror of the main repository on git.1011.no, so pull requests are merged there and then show up
-here as merged; please don't be surprised that GitHub's merge button isn't used.
+repository is a copy of the main repository on git.1011.no: pull requests are brought over there (within half an
+hour), tested by its CI, merged there, and then show up here as merged. GitHub's merge button isn't used.
 
 ## Features
 
@@ -110,9 +110,14 @@ personal token) gives the CI one-hour tokens (`scripts/github-token.sh`): the `g
 branch and tag to GitHub after each push, and the release job also publishes a GitHub Release
 (`scripts/github-release.sh`). Setup: create the app (Contents and Workflows: Read and write, no webhook, only this
 account), install it on MariusEng/notepad, generate a private key, then `scripts/github-setup.sh <app id> <key.pem>`
-stores the Forgejo secrets GH_APP_ID and GH_APP_PRIVATE_KEY. Pull requests from GitHub:
-`scripts/github-pr.sh list | show <n> | merge <n>` merges locally and pushes to git.1011.no; never merge on GitHub
-(the mirror overwrites GitHub's branches).
+stores the Forgejo secrets GH_APP_ID and GH_APP_PRIVATE_KEY. Pull requests from GitHub (0.16.2): the `github-prs` workflow (every 30 min, or Run
+workflow) opens each one as a Forgejo pull request from the bot account `github-sync` (read-only collaborator, its
+own fork with Actions off; `scripts/github-pr-sync.mjs`, bot setup/renewal `scripts/github-sync-bot.py`). Because
+the bot isn't trusted, `ci.yml` (typecheck, build, `cargo test`, Linux docker runner) runs only after you click
+Approve on the pull request, and without secrets. Read changes to `.forgejo/` first (the pull request says so).
+Branch protection: merging into main needs a green `ci / test`; direct pushes still work. Merge on Forgejo; GitHub
+then shows it merged (after squash/rebase the sync comments and closes it). `scripts/github-pr.sh` is the manual
+alternative. Never merge on GitHub (the mirror overwrites GitHub's branches).
 
 
 Requirements: Node.js 20+, Rust (stable), and the

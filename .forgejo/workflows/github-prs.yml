@@ -1,0 +1,31 @@
+# Brings GitHub pull requests into Forgejo as pull requests from the bot account `github-sync` (its fork), so they
+# are tested by ci.yml and merged here. See scripts/github-pr-sync.mjs. Every 30 minutes, or Actions → Run workflow.
+# Schedules always run the workflow from main, so this file and its secrets can't be changed by a pull request.
+name: github-prs
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Sync pull requests
+        env:
+          GH_APP_ID: ${{ secrets.GH_APP_ID }}
+          GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          SYNC_BOT_TOKEN: ${{ secrets.SYNC_BOT_TOKEN }}
+          FORGEJO_URL: ${{ github.server_url }}
+        run: |
+          if [ -z "$GH_APP_ID" ] || [ -z "$SYNC_BOT_TOKEN" ]; then
+            echo "GH_APP_ID / SYNC_BOT_TOKEN aren't set: nothing to do"
+            exit 0
+          fi
+          node scripts/github-pr-sync.mjs

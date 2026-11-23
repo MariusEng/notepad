@@ -189,6 +189,17 @@ the features, shortcuts and file layout.
   <n> (refs/pull/n/head, --no-ff merge on main, push to git.1011.no; GitHub then marks the PR merged). Still bump
   version + CHANGELOG for merged PRs. License: MIT (LICENSE, user's choice).
 
+- GitHub pull requests → Forgejo (0.16.2): `.forgejo/workflows/github-prs.yml` (cron */30 + dispatch, runs from main)
+  → `scripts/github-pr-sync.mjs` (Node; GitHub App JWT in-process): each open GitHub PR #N → branch `github-pr-N`
+  in the fork `github-sync/notepad` → Forgejo PR "GitHub #N: …" opened BY THE BOT. The bot `github-sync` is a
+  restricted user with READ access only (created by `scripts/github-sync-bot.py`, admin; token in secret
+  SYNC_BOT_TOKEN, never printed; secret names may not start with FORGEJO_/GITHUB_), so Forgejo 15 treats its PRs as
+  untrusted: CI needs the user's Approve and gets no secrets. Opening them as marius would run them at once with the
+  PR's own workflow files (could pick the Mac host runner): never do that. Closed on GitHub → closed here; merged here
+  → mirror pushes main → GitHub marks merged (merge commit), else the sync comments + closes it (app has Pull
+  requests: write). `.forgejo/workflows/ci.yml` = test job (docker runner only; typecheck, build, cargo test).
+  Branch protection on main: status check `ci / test (pull_request)`, pushes allowed.
+
 ## Gotchas found so far
 - macOS "Notepad is damaged and can't be opened" for a downloaded build (2026-11-22): only the binary was
   linker-signed, the bundle wasn't sealed. tauri.conf.json `bundle.macOS.signingIdentity: "-"` ad-hoc signs the
@@ -223,8 +234,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.16.1)
-Latest (0.16.1): GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-23, version 0.16.2)
+Latest (0.16.2): GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
