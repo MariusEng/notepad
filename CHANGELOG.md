@@ -2,6 +2,11 @@
 
 The main changes in each version, newest first.
 
+## 0.17.0 — 2026-11-23
+
+- **Updates**: Help → Check for Updates…, and Notepad looks for a new version by itself once a day ("Update to …" in the status bar). Install and Restart downloads, checks and installs it, and your tabs come back.
+- On macOS, updated versions no longer need "Open Anyway" in System Settings: install this version by hand once more, and later versions come through the app.
+
 ## 0.16.3 — 2026-11-23
 
 - GitHub only accepts changes that come from git.1011.no, so pull requests can't be merged there by mistake.

@@ -517,7 +517,12 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         app,
         "Help",
         true,
-        &[&item("help", "Notepad Help", None)?, &item("shortcuts", "Keyboard Shortcuts", None)?],
+        &[
+            &item("help", "Notepad Help", None)?,
+            &item("shortcuts", "Keyboard Shortcuts", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("check_updates", "Check for Updates…", None)?,
+        ],
     )?;
     #[cfg(not(target_os = "macos"))]
     {
@@ -593,6 +598,9 @@ pub fn run() {
         }));
     let app = builder
         .plugin(tauri_plugin_dialog::init())
+        // Updates from GitHub Releases (latest.json, signed with the updater key; see scripts/updater-manifest.mjs).
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(window_state_flags())

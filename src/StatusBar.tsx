@@ -6,6 +6,7 @@ import { useGit } from "./git/store";
 import { showBranchMenu, syncNow, toggleSidebar } from "./git/actions";
 import { useSettings } from "./settings";
 import { revealProblem, useValidation } from "./editors/validation";
+import { UpdateStatus } from "./updates";
 
 /** Branch (click: branch menu) and sync state (click: sync now) of the open repository. */
 function RepoStatus() {
@@ -89,6 +90,7 @@ export function StatusBar() {
     return (
       <footer className="statusbar">
         <SidebarToggle />
+        <UpdateStatus />
       </footer>
     );
 
@@ -96,6 +98,7 @@ export function StatusBar() {
     return (
       <footer className="statusbar">
         <SidebarToggle />
+        <UpdateStatus />
         <span className="sb-spacer" />
         <RepoStatus />
         <span className="sb-item">Loading…</span>
@@ -105,6 +108,7 @@ export function StatusBar() {
     return (
       <footer className="statusbar">
         <SidebarToggle />
+        <UpdateStatus />
         <span className="sb-spacer" />
         <RepoStatus />
         <span className="sb-item">SQLite database</span>
@@ -117,6 +121,7 @@ export function StatusBar() {
   return (
     <footer className="statusbar">
       <SidebarToggle />
+      <UpdateStatus />
       <span className="sb-spacer" />
       <RepoStatus />
       <span className="sb-item">

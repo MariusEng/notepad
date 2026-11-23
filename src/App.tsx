@@ -8,6 +8,7 @@ import { FormatBar } from "./FormatBar";
 import { Sidebar } from "./sidebar/Sidebar";
 import { GitDialogs } from "./git/Dialogs";
 import { AboutDialog } from "./About";
+import { UpdateDialog } from "./updates";
 import { CodeEditor } from "./editors/CodeEditor";
 import { MarkdownEditor } from "./editors/MarkdownEditor";
 import { HtmlPreview } from "./editors/HtmlPreview";
@@ -53,6 +54,7 @@ export function App() {
       <TypePicker />
       <GitDialogs />
       <AboutDialog />
+      <UpdateDialog />
       {notice && (
         <div className={`toast ${notice.kind}`} role="status">
           {notice.text}

@@ -1346,3 +1346,21 @@ body.resizing-v * {
     grid-template-columns: 140px 1fr;
   }
 }
+
+/* ---------- updates (updates.tsx) ---------- */
+.update-notes {
+  max-height: 220px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sb-update {
+  color: var(--accent);
+}

@@ -121,6 +121,13 @@ Select a rectangle of text across several lines, for example one column of a CSV
 - In CSV files every column keeps its own colour on every line, and the header line is bold. In log files the leading columns (time, level, thread, logger…) are coloured, and error and warning lines are tinted.
 - Files over 4 MB load in the background with a progress bar in the tab. Notepad opens files up to 512 MB.
 
+## Updates
+
+- **Help → Check for Updates…** looks for a new version. If there is one, you see what changed and can **Install and Restart**: Notepad downloads it, checks its signature, installs it and starts again with your tabs and unsaved changes.
+- Notepad also checks by itself when it starts and once a day; a new version then shows as **Update to …** in the status bar. Turn this off with *Check for updates automatically* in the update window.
+- On macOS, updates installed this way open without the "unverified developer" prompt.
+- Linux: updates work for the AppImage and for the .deb and .rpm packages (installing a package asks for your password).
+
 ## Appearance
 
 The theme follows the system; choose Light or Dark under **View → Theme**.

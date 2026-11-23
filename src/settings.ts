@@ -19,9 +19,11 @@ interface SettingsData {
   sidebarSplit: number;
   /** Git accounts (the secrets are in the OS keychain, not here). */
   accounts: Account[];
+  /** Look for a new version at launch and once a day (updates.tsx). */
+  autoUpdates: boolean;
 }
 
-type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts">;
+type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts" | "autoUpdates">;
 
 interface Settings extends SettingsData {
   setTheme: (t: ThemePref) => void;
@@ -42,6 +44,7 @@ const persist = (s: SettingsData) =>
         folderRoot: s.folderRoot,
         sidebarSplit: s.sidebarSplit,
         accounts: s.accounts,
+        autoUpdates: s.autoUpdates,
       }),
     )
     .catch(() => {});
@@ -55,6 +58,7 @@ export const useSettings = create<Settings>((set, get) => ({
   folderRoot: null,
   sidebarSplit: 0.5,
   accounts: [],
+  autoUpdates: true,
   setTheme: (theme) => {
     set({ theme });
     setThemePref(theme);
@@ -82,6 +86,7 @@ export async function loadSettings() {
       folderRoot: data.folderRoot ?? null,
       sidebarSplit: typeof data.sidebarSplit === "number" ? data.sidebarSplit : 0.5,
       accounts: Array.isArray(data.accounts) ? data.accounts : [],
+      autoUpdates: data.autoUpdates ?? true,
     });
     useSettings.getState().setTheme(data.theme ?? "system");
   } catch {

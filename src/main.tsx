@@ -21,6 +21,7 @@ import {
   toggleSource,
 } from "./actions";
 import { openAbout } from "./About";
+import { checkForUpdates, startAutoUpdates } from "./updates";
 import { openSaveAsPicker, openTypePicker } from "./TypePicker";
 import {
   openDialog,
@@ -84,6 +85,7 @@ const MENU: Record<string, () => unknown> = {
   shortcuts: openShortcuts,
   encoding: () => showEncodingMenu(),
   about: openAbout,
+  check_updates: () => checkForUpdates(true),
   install_cli: installCli,
   toggle_sidebar: toggleSidebar,
   toggle_autocommit: toggleAutoCommit,
@@ -159,6 +161,7 @@ async function start() {
 
   createRoot(document.getElementById("root")!).render(<App />);
   loadRestoredBigFiles();
+  startAutoUpdates();
 }
 
 // The window starts hidden (tauri.conf.json) so it never shows unthemed content.
