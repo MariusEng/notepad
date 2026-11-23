@@ -9,7 +9,9 @@
 # secrets), or on this Mac from the login keychain items made by scripts/macos-signing-setup.sh. Without them the
 # command runs as it is (ad-hoc signing, as before).
 #
-# A temporary keychain holds the certificate for the command only; it is removed afterwards.
+# A temporary keychain holds the certificate for the command only; it is removed afterwards. It is NOT added to the
+# keychain search list (that didn't reach codesign for the CI runner's background user): a `codesign` wrapper first in
+# PATH names the keychain when signing (Tauri runs plain `codesign`).
 set -euo pipefail
 
 p12="${MACOS_SIGNING_P12:-}"
@@ -26,16 +28,8 @@ fi
 work=$(mktemp -d)
 kc="$work/notepad-signing.keychain-db"
 kcpw=$(openssl rand -hex 16)
-old_list=()
-while IFS= read -r line; do
-  line="${line#"${line%%[![:space:]]*}"}"
-  line="${line%\"}"
-  line="${line#\"}"
-  [ -n "$line" ] && old_list+=("$line")
-done < <(security list-keychains -d user)
 
 cleanup() {
-  security list-keychains -d user -s ${old_list[@]+"${old_list[@]}"} >/dev/null 2>&1 || true
   security delete-keychain "$kc" >/dev/null 2>&1 || true
   rm -rf "$work"
 }
@@ -50,8 +44,16 @@ setup() {
   security import "$work/cert.p12" -k "$kc" -P "$pw" -T /usr/bin/codesign >/dev/null
   security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$kcpw" "$kc" >/dev/null
   rm -f "$work/cert.p12"
-  # codesign looks for the identity in the search list.
-  security list-keychains -d user -s ${old_list[@]+"${old_list[@]}"} "$kc"
+  # codesign: when signing (-s/--sign), search only our keychain for the identity.
+  mkdir -p "$work/bin"
+  cat >"$work/bin/codesign" <<WRAP
+#!/bin/sh
+for a in "\$@"; do
+  case "\$a" in -s|--sign) exec /usr/bin/codesign --keychain "$kc" "\$@" ;; esac
+done
+exec /usr/bin/codesign "\$@"
+WRAP
+  chmod +x "$work/bin/codesign"
   # The certificate isn't trusted as an Apple one ("CSSMERR_TP_NOT_TRUSTED"), which codesign accepts; take its hash.
   identity=$(security find-identity -p codesigning "$kc" | awk '/^ *1\)/ {print $2; exit}')
   [ -n "$identity" ]
@@ -66,4 +68,4 @@ if ! (set -e; setup) || ! identity=$(security find-identity -p codesigning "$kc"
   exec "$@"
 fi
 echo "Signing with Notepad's certificate ($identity)"
-APPLE_SIGNING_IDENTITY="$identity" "$@"
+PATH="$work/bin:$PATH" APPLE_SIGNING_IDENTITY="$identity" "$@"
