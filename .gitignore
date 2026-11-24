@@ -4,3 +4,11 @@ src-tauri/target/
 src-tauri/gen/schemas/
 .DS_Store
 *.log
+
+# Signing certificates and keys: never commit (see scripts/macos-signing-setup.sh)
+cert/
+*.p12
+*.pfx
+*.cer
+*.pem
+*.key
