@@ -65,6 +65,7 @@ Repeat an edit as often as you like, as in Notepad++:
 Tips:
 
 - Start where the edit begins (e.g. at the start of a line) and end where the next one should begin (e.g. the start of the next line). Then "until the end of the file" does every line.
+- "Until the end of the file" stops when the cursor reaches the end, or when a run doesn't bring it any closer to the end (for example on the last line, or when Find Next wraps around to the top).
 - Paste in a macro pastes what the macro copied or cut earlier in the same run; otherwise the text pasted while recording.
 - Mouse clicks aren't recorded. Macros work in code and plain-text files and in the source view of Markdown and HTML.
 - A long run can be stopped by clicking **Playing macro…** in the status bar.

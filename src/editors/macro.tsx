@@ -203,14 +203,17 @@ export async function playMacro(steps: MacroStep[], mode: RunMode = { times: 1 }
   let started = performance.now();
   try {
     const total = "times" in mode ? Math.min(mode.times, MAX_RUNS) : MAX_RUNS;
+    // Until the end of the file: every run must bring the cursor closer to the end, i.e. leave less text after it.
+    // Otherwise it stops: a run that stays on the last line (e.g. a macro ending with Home), Find Next wrapping
+    // around to the top, or a run that does nothing would repeat forever. Text the macro inserts before the cursor
+    // doesn't count, so a macro that edits each line and moves on still works.
+    const after = () => view.state.doc.length - view.state.selection.main.head;
     while (runs < total) {
-      const doc = view.state.doc;
-      const head = view.state.selection.main.head;
-      if ("toEnd" in mode && head >= doc.length) break;
+      const left = after();
+      if ("toEnd" in mode && left <= 0) break;
       for (const s of steps) runStep(view, s);
       runs++;
-      // Until the end: stop when a run changes nothing and doesn't move (it would loop forever).
-      if ("toEnd" in mode && view.state.doc === doc && view.state.selection.main.head === head) break;
+      if ("toEnd" in mode && after() >= left) break;
       // Keep the window responsive during long runs.
       if (performance.now() - started > 100) {
         await new Promise((r) => setTimeout(r, 0));

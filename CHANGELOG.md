@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.19.3 — 2026-11-24
+
+- Macros: "until the end of the file" now stops at the end. Before, a macro that ended at the start of a line, or one using Find Next, could keep repeating on the last line or start over from the top.
+
 ## 0.19.2 — 2026-11-24
 
 - A managed edition can be built for organisations that install and update Notepad themselves (no update check, installs for all users).

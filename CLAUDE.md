@@ -226,8 +226,9 @@ the features, shortcuts and file layout.
   observer at Prec.highest for text, domEventObservers for keys with Ctrl/⌘ or named keys, paste/copy/cut, beforeinput
   historyUndo/Redo; playback: keys via runScopeHandlers(view, KeyboardEvent, "editor"), text char by char through the
   inputHandler facet (closeBrackets only acts on single chars), find/replace via FindPanel.playSearch; paste uses
-  what copy/cut set during the same playback). Run once / n / until EOF (stops at doc end or when a run changes
-  nothing), yields every 100 ms. Menu Edit → Macro (macro_record ⇧⌘R, macro_play ⇧⌘P, macro_macros dialog).
+  what copy/cut set during the same playback). Run once / n / until EOF: every run must leave less text after the
+  cursor, else it stops (0.19.3 fix: a macro ending with Home on the last line, or Find Next wrapping to the top,
+  repeated up to MAX_RUNS); yields every 100 ms. Menu Edit → Macro (macro_record ⇧⌘R, macro_play ⇧⌘P, macro_macros dialog).
   settings.lastMacro + settings.macros. Mouse not recorded. Not in formatted Markdown or the SQLite query editor
   (EditorHandle.view only in CodeEditor). Tested with jsdom in the scratchpad (8 cases); ArrowUp/Down need real layout.
 
@@ -275,8 +276,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-24, version 0.19.2)
-Latest (0.19.2): managed build option. 0.19.1: macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-24, version 0.19.3)
+Latest (0.19.3): macro "until the end of the file" stops at the end. 0.19.2: managed build option. 0.19.1: macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
@@ -325,13 +326,6 @@ a secret, so it stays token-based.
   (identifier no.1011.notepad.managed, NSIS perMachine, updater endpoints [], no updater artifacts; Tauri refuses
   unknown keys such as "$comment"). cli.rs writes the running app's own bundle id into /usr/local/bin/notepad. ci.yml
   builds the managed frontend. deling-publish.sh: DELING_SLUG/NAME/PASSWORD. deling has password protection.
-- TODO (reported 2026-11-23, 0.19.1): macro playback "until the end of the file" doesn't seem to stop at the end of the
-  file. Check `playMacro` in editors/macro.tsx: it only stops when the cursor is at doc.length BEFORE a run, or when a
-  run changes neither the text nor the cursor. Suspects: a macro that ends on the last line without reaching
-  doc.length (e.g. Home … ArrowDown on a last line that isn't empty, or a trailing newline being re-added), so every
-  run still edits the last line until MAX_RUNS (100,000). Notepad++ stops once the caret reaches the end of the file.
-  Ideas: also stop when a run leaves the cursor on the same line as before (or a line before it) while editing,
-  and/or when the cursor ends on the last line; test with the jsdom setup (scratchpad) plus a real-app check.
 - More memory ideas (not done): after editing a big document (> 2 M chars) the store holds a flattened copy while
   CodeMirror's lines still pin the original string (≈ 2× the file); keeping no store copy for mounted big docs would
   need every `tab.content` reader to go through the editor. Dirty/untitled background tabs could also be unloaded
