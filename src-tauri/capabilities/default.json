@@ -11,8 +11,6 @@
     "core:window:allow-set-title",
     "core:window:allow-destroy",
     "core:app:allow-set-app-theme",
-    "dialog:default",
-    "updater:default",
-    "process:allow-restart"
+    "dialog:default"
   ]
 }

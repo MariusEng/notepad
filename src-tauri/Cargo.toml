@@ -1,6 +1,6 @@
 [package]
 name = "notepad"
-version = "0.19.3"
+version = "0.20.0"
 description = "A modern notepad with WYSIWYG Markdown and syntax highlighting"
 license = "MIT"
 edition = "2021"
@@ -33,7 +33,6 @@ tauri-plugin-single-instance = "2"
 # SQLite databases (File → New Database…, opening .sqlite/.db files). Bundled: no system SQLite needed.
 rusqlite = { version = "0.43", features = ["bundled"] }
 tauri-plugin-updater = "2"
-tauri-plugin-process = "2"
 
 # libgit2 uses the system TLS on macOS and Windows, but its openssl-sys dependency still gets built on
 # every unix: vendoring OpenSSL means no Homebrew/OpenSSL install is needed (adds a minute to the first build).

@@ -10,7 +10,7 @@ const close = () => useAbout.setState({ open: false });
 
 /** Open source components included in the app (licences as published by each project). */
 const COMPONENTS: { name: string; use: string; license: string; url: string }[] = [
-  { name: "Tauri 2", use: "app framework, native menus and windows, single-instance, dialog, updater and process plugins", license: "MIT / Apache-2.0", url: "https://tauri.app" },
+  { name: "Tauri 2", use: "app framework, native menus and windows, single-instance, dialog and updater plugins", license: "MIT / Apache-2.0", url: "https://tauri.app" },
   { name: "React", use: "user interface", license: "MIT", url: "https://react.dev" },
   { name: "CodeMirror 6 and Lezer", use: "code editor and syntax highlighting", license: "MIT", url: "https://codemirror.net" },
   { name: "Milkdown (Crepe) and ProseMirror", use: "formatted Markdown editor", license: "MIT", url: "https://milkdown.dev" },

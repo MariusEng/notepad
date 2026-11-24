@@ -90,7 +90,8 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
   or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
   unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
 - **Updates**: Help → Check for Updates… and a daily check (status bar "Update to …"); downloads from GitHub
-  Releases, verifies the signature, installs, restarts with the session restored (tauri-plugin-updater; see Releases).
+  Releases, verifies the signature, installs, restarts with the session restored (tauri-plugin-updater, driven from
+  Rust in `src-tauri/src/update.rs`; on macOS the app's contents are replaced in place so a pinned Dock icon stays).
 - **SQLite databases**: open `.sqlite`/`.db` files (recognised by their header), or File → New Database…. Tables and
   views on the left (click: rows, ▸: columns, right-click: Insert SELECT / Copy CREATE / Drop), a SQL editor with
   table/column completion (⌘↵ runs it or the selection, Stop cancels), results grid (first 1,000 rows, Open as CSV),

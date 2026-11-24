@@ -208,8 +208,9 @@ the features, shortcuts and file layout.
   the user's "Default" (deletion + non_fast_forward; bypass admin role + the App: the mirror force-pushes main).
 
 - Updates (0.17.0, user request; Help → Check for Updates…, user wants it in the Help menu on all platforms):
-  tauri-plugin-updater + plugin-process, `src/updates.tsx` (manual check = dialog; auto check 15 s after launch and
-  daily if settings.autoUpdates → status bar "Update to X"; install = saveSessionNow → downloadAndInstall → relaunch).
+  tauri-plugin-updater (used from Rust since 0.20.0: src-tauri/src/update.rs), `src/updates.tsx` (manual check =
+  dialog; auto check 15 s after launch and daily if settings.autoUpdates → status bar "Update to X"; install =
+  saveSessionNow → invoke update_install, which restarts the app).
   Endpoint https://github.com/MariusEng/notepad/releases/latest/download/latest.json (user's final choice: GitHub; 0.17.0
   alone was built with https://deling.1011.no/notepad/last-ned/latest.json, so deling still gets a copy of
   latest.json with GitHub URLs until nobody runs 0.17.0). github-release.sh creates new releases as DRAFTS and
@@ -248,6 +249,20 @@ the features, shortcuts and file layout.
   `codesign` wrapper first in PATH adds `--keychain <temp>` when signing. No certificate or a setup error → ad-hoc
   build with a warning. Gatekeeper is unchanged (still unidentified). I was not
   allowed to store the secrets myself (permission check), so the user runs the setup script.
+  NOT ENOUGH (found 2026-11-24): besides the ACL (which did follow the certificate), keychain items have a
+  partition list, and for an app WITHOUT an Apple team ID the partition is `cdhash:<build>` (seen with
+  `security dump-keychain -a`), so every update still asked once per item. Fix (0.20.0): on macOS creds.rs stores
+  sign-ins through /usr/bin/security (`apple_tool`: service no.1011.notepad.git, value base64 via `security -i` +
+  `-X hex` on stdin, never argv; read with -w); such items belong to the tool (partition apple-tool:), so updates
+  don't matter. Trade-off: other programs of the user can read them via the tool (like git-credential-osxkeychain,
+  gh). Old keyring items are migrated on first load (one last prompt) and deleted. Windows/Linux keep keyring.
+- Dock (found 2026-11-24): the plugin's macOS install swaps the whole Notepad.app folder, so a pinned Dock tile kept
+  pointing at the old folder and the updated app showed as a second, "recent" tile. 0.20.0: `src-tauri/src/update.rs`
+  does check/download (plugin: verifies the signature) in Rust (commands update_check / update_install, progress
+  event "update-progress") and on macOS installs IN PLACE: unpack into Notepad.app/.notepad-update, check the bundle
+  id, rename Contents aside, new Contents in (rollback on failure), lsregister -f; else falls back to
+  update.install(). JS plugin-updater/plugin-process removed (and their capabilities). Tests: inode kept, wrong app
+  refused; NOTEPAD_REAL_UPDATE_TEST=<tar.gz>:<app copy> cargo test real_files runs it on real files.
 - Windows Credential Manager: max 2560 bytes per entry (keyring stores UTF-16 → 1280 units). creds.rs splits a
   longer secret (OAuth access + refresh token) into `host#1..N` entries with `parts:N` in the main entry; short
   secrets and old entries stay one plain JSON entry (0.12.6, after the user's Windows sign-in failed).
@@ -276,8 +291,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-24, version 0.19.3)
-Latest (0.19.3): macro "until the end of the file" stops at the end. 0.19.2: managed build option. 0.19.1: macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-24, version 0.20.0)
+Latest (0.20.0): no keychain prompts on update (sign-ins via /usr/bin/security), in-place macOS updates (Dock tile kept). Both seen working only in tests so far. 0.19.3: macro "until the end of the file" stops at the end. 0.19.2: managed build option. 0.19.1: macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.

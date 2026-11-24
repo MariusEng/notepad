@@ -2,6 +2,11 @@
 
 The main changes in each version, newest first.
 
+## 0.20.0 — 2026-11-24
+
+- macOS: updates no longer ask for keychain access. Git sign-ins are now kept in the keychain through Apple's own tool, so they don't depend on Notepad's version. After this update macOS asks one last time while Notepad moves your sign-ins over.
+- macOS: after an update, Notepad stays on its pinned Dock icon instead of appearing as a second icon. Updates now replace the app's contents instead of the whole app.
+
 ## 0.19.3 — 2026-11-24
 
 - Macros: "until the end of the file" now stops at the end. Before, a macro that ended at the start of a line, or one using Find Next, could keep repeating on the last line or start over from the top.

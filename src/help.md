@@ -147,7 +147,7 @@ Select a rectangle of text across several lines, for example one column of a CSV
 
 - **Help → Check for Updates…** looks for a new version. If there is one, you see what changed and can **Install and Restart**: Notepad downloads it, checks its signature, installs it and starts again with your tabs and unsaved changes.
 - Notepad also checks by itself when it starts and once a day; a new version then shows as **Update to …** in the status bar. Turn this off with *Check for updates automatically* in the update window.
-- On macOS, updates installed this way open without the "unverified developer" prompt.
+- On macOS, updates installed this way open without the "unverified developer" prompt, don't ask for keychain access, and keep Notepad on its pinned Dock icon.
 - Linux: updates work for the AppImage and for the .deb and .rpm packages (installing a package asks for your password).
 
 ## Appearance

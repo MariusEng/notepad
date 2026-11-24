@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { getVersion } from "@tauri-apps/api/app";
-import type { Update } from "@tauri-apps/plugin-updater";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useSettings } from "./settings";
 import { MANAGED } from "./edition";
 
@@ -14,9 +15,16 @@ import { MANAGED } from "./edition";
  * developer" prompt that a browser download gets.
  */
 
+/** A newer version (Rust `update_check`, src-tauri/src/update.rs). */
+interface UpdateInfo {
+  version: string;
+  currentVersion: string;
+  body: string | null;
+}
+
 interface UpdateState {
   /** A newer version that was found (the dialog or the status bar button offers it). */
-  update: Update | null;
+  update: UpdateInfo | null;
   current: string;
   /** "found": offer the update; "none": up to date; "error": the check failed; "managed": the organisation updates
    *  this edition (edition.ts). */
@@ -48,8 +56,7 @@ export async function checkForUpdates(manual: boolean) {
   if (checking) return;
   checking = true;
   try {
-    const [{ check }, current] = await Promise.all([import("@tauri-apps/plugin-updater"), getVersion()]);
-    const update = await check();
+    const [update, current] = await Promise.all([invoke<UpdateInfo | null>("update_check"), getVersion()]);
     set({ update, current });
     if (manual) set({ dialog: update ? "found" : "none" });
   } catch (e) {
@@ -82,13 +89,14 @@ async function install() {
     // the app right after the download).
     const { saveSessionNow } = await import("./session/session");
     await saveSessionNow();
-    await update.downloadAndInstall((ev) => {
-      if (ev.event === "Started") set({ progress: { done: 0, total: ev.data.contentLength ?? 0 } });
-      else if (ev.event === "Progress")
-        set((s) => ({ progress: { done: (s.progress?.done ?? 0) + ev.data.chunkLength, total: s.progress?.total ?? 0 } }));
-    });
-    const { relaunch } = await import("@tauri-apps/plugin-process");
-    await relaunch();
+    // Rust downloads, verifies, installs (on macOS inside the same Notepad.app, so a pinned Dock icon stays) and
+    // restarts the app; progress arrives as events.
+    const stop = await listen<{ done: number; total: number }>("update-progress", (e) => set({ progress: e.payload }));
+    try {
+      await invoke("update_install");
+    } finally {
+      stop();
+    }
   } catch (e) {
     set({ installing: false, progress: null, dialog: "error", error: `The update couldn't be installed: ${e}` });
   }

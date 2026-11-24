@@ -25,6 +25,7 @@ mod git_cmds;
 mod gitops;
 mod oauth;
 mod provider;
+mod update;
 #[cfg(test)]
 mod git_tests;
 
@@ -613,13 +614,13 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Updates from GitHub Releases (latest.json, signed with the updater key; see scripts/updater-manifest.mjs).
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(window_state_flags())
                 .build(),
         )
         .manage(PendingOpen(Mutex::new(cli_files)))
+        .manage(update::Pending::default())
         .menu(|app| build_menu(app))
         .setup(|app| {
             // Windows: WebView2 keeps browser shortcuts for itself (Ctrl+N / Ctrl+Shift+N open a browser window, F5 and
@@ -702,6 +703,8 @@ pub fn run() {
             git_cmds::oauth_device_poll,
             git_cmds::oauth_login,
             cli::install_cli,
+            update::update_check,
+            update::update_install,
             db::db_probe,
             db::db_schema,
             db::db_run,
