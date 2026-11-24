@@ -317,14 +317,14 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
-- Managed edition for the user's workplace (planned 2026-11-24): signed builds without self-update, built in the
-  separate PRIVATE repo git.1011.no/marius/notepad-eika from each release of this project. The plan (PLAN.md) and
-  all workplace details live there only, because this repo is copied to public GitHub. DONE here (0.19.2): the
-  managed build option = `VITE_NOTEPAD_MANAGED=1` (src/edition.ts; updates.tsx short-circuits, the bundler drops
-  the update code; About "(managed)") + `--config src-tauri/tauri.managed.conf.json` (identifier
-  no.1011.notepad.managed, NSIS perMachine, updater endpoints [], no updater artifacts; Tauri refuses unknown keys
-  such as "$comment"). cli.rs writes the running app's own bundle id into /usr/local/bin/notepad. ci.yml builds the
-  managed frontend. deling-publish.sh: DELING_SLUG/NAME/PASSWORD. deling has password protection (done by the user).
+- Managed edition (planned 2026-11-24): signed builds without self-update for an organisation, built in a separate
+  PRIVATE repository from each release of this project (its name and plan: see Claude's local memory, not this
+  repo). Never name the organisation in this repository, its commits or pull requests: it is copied to public GitHub.
+  DONE here (0.19.2): the managed build option = `VITE_NOTEPAD_MANAGED=1` (src/edition.ts; updates.tsx
+  short-circuits, the bundler drops the update code; About "(managed)") + `--config src-tauri/tauri.managed.conf.json`
+  (identifier no.1011.notepad.managed, NSIS perMachine, updater endpoints [], no updater artifacts; Tauri refuses
+  unknown keys such as "$comment"). cli.rs writes the running app's own bundle id into /usr/local/bin/notepad. ci.yml
+  builds the managed frontend. deling-publish.sh: DELING_SLUG/NAME/PASSWORD. deling has password protection.
 - TODO (reported 2026-11-23, 0.19.1): macro playback "until the end of the file" doesn't seem to stop at the end of the
   file. Check `playMacro` in editors/macro.tsx: it only stops when the cursor is at doc.length BEFORE a run, or when a
   run changes neither the text nor the cursor. Suspects: a macro that ends on the last line without reaching
