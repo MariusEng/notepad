@@ -317,6 +317,10 @@ a secret, so it stays token-based.
 
 ## Possible next steps
 - Fix whatever the user reports from using the app.
+- Managed edition for the user's workplace (planned 2026-11-24): signed builds without self-update, built in the
+  separate PRIVATE repo git.1011.no/marius/notepad-eika from each release of this project. The plan (PLAN.md) and
+  all workplace details live there only, because this repo is copied to public GitHub. Work here: a "managed"
+  build option (no update check, per-machine installer). Also planned: password protection in marius/deling.
 - TODO (reported 2026-11-23, 0.19.1): macro playback "until the end of the file" doesn't seem to stop at the end of the
   file. Check `playMacro` in editors/macro.tsx: it only stops when the cursor is at doc.length BEFORE a run, or when a
   run changes neither the text nor the cursor. Suspects: a macro that ends on the last line without reaching
