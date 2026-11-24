@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { getVersion } from "@tauri-apps/api/app";
 import type { Update } from "@tauri-apps/plugin-updater";
 import { useSettings } from "./settings";
+import { MANAGED } from "./edition";
 
 /**
  * Updates: Help → Check for Updates…, and (unless turned off) a quiet check at launch and once a day. The app reads
@@ -17,8 +18,9 @@ interface UpdateState {
   /** A newer version that was found (the dialog or the status bar button offers it). */
   update: Update | null;
   current: string;
-  /** "found": offer the update; "none": up to date; "error": the check failed. */
-  dialog: null | "found" | "none" | "error";
+  /** "found": offer the update; "none": up to date; "error": the check failed; "managed": the organisation updates
+   *  this edition (edition.ts). */
+  dialog: null | "found" | "none" | "error" | "managed";
   error: string;
   /** While downloading: bytes so far and total (0 when the server doesn't say). */
   progress: { done: number; total: number } | null;
@@ -39,6 +41,10 @@ let checking = false;
 
 /** `manual`: from the Help menu, so the result is always shown; an automatic check only lights up the status bar. */
 export async function checkForUpdates(manual: boolean) {
+  if (MANAGED) {
+    if (manual) set({ dialog: "managed" });
+    return;
+  }
   if (checking) return;
   checking = true;
   try {
@@ -58,12 +64,13 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** Launch: check after a short while (not during startup), then once a day while the app runs. */
 export function startAutoUpdates() {
+  if (MANAGED) return;
   const auto = () => useSettings.getState().autoUpdates && void checkForUpdates(false);
   setTimeout(auto, 15_000);
   setInterval(auto, DAY);
 }
 
-export const openUpdateDialog = () => set({ dialog: useUpdates.getState().update ? "found" : "none" });
+export const openUpdateDialog = () => set({ dialog: MANAGED ? "managed" : useUpdates.getState().update ? "found" : "none" });
 const close = () => set({ dialog: null, error: "" });
 
 async function install() {
@@ -129,6 +136,17 @@ export function UpdateDialog() {
               </button>
               <button className="btn primary" disabled={installing} onClick={() => void install()} autoFocus>
                 {installing ? "Installing…" : "Install and Restart"}
+              </button>
+            </div>
+          </>
+        ) : dialog === "managed" ? (
+          <>
+            <h2>Updates are managed by your organisation</h2>
+            <p className="note">New versions of Notepad come from your organisation (for example through Company Portal), not from Notepad itself.</p>
+            <div className="dialog-actions">
+              <span className="sb-spacer" />
+              <button className="btn primary" onClick={close} autoFocus>
+                OK
               </button>
             </div>
           </>

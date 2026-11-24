@@ -1,7 +1,8 @@
 //! macOS: Notepad → Install Command Line Tool… puts a `notepad` command in /usr/local/bin (on the default PATH), so
 //! `notepad file.txt` opens files from a terminal. It starts a new instance through Launch Services; the
 //! single-instance plugin hands its files (resolved against the terminal's folder) to a Notepad that is already
-//! running, or that instance becomes Notepad. The app is found by its bundle id, so moving Notepad.app is fine.
+//! running, or that instance becomes Notepad. The app is found by its bundle id, so moving Notepad.app is fine. The id
+//! is the running app's own (`__BUNDLE_ID__` in SCRIPT), so the managed edition's command opens the managed edition.
 
 /// The installed command. `--args` reaches the app as argv (`files_from_args`), also for files that don't exist yet.
 pub const SCRIPT: &str = r#"#!/bin/sh
@@ -14,15 +15,20 @@ for f do
   esac
   set -- "$@" "$f"
 done
-exec open -n -b no.1011.notepad --args "$@"
+exec open -n -b __BUNDLE_ID__ --args "$@"
 "#;
 
 pub const TARGET: &str = "/usr/local/bin/notepad";
 /// Marks a file as ours, so an unrelated `notepad` command is never overwritten.
 const MARK: &str = "Installed by Notepad";
 
+/// The command for the app with this bundle id.
+pub fn script_for(bundle_id: &str) -> String {
+    SCRIPT.replace("__BUNDLE_ID__", bundle_id)
+}
+
 #[cfg(target_os = "macos")]
-pub fn install() -> Result<String, String> {
+pub fn install(bundle_id: &str) -> Result<String, String> {
     use std::path::Path;
     use std::process::Command;
     if let Ok(existing) = std::fs::read_to_string(TARGET) {
@@ -33,7 +39,7 @@ pub fn install() -> Result<String, String> {
         return Err(format!("{TARGET} already exists and isn't Notepad's. Remove it first."));
     }
     let tmp = std::env::temp_dir().join("notepad-cli.sh");
-    std::fs::write(&tmp, SCRIPT).map_err(|e| e.to_string())?;
+    std::fs::write(&tmp, script_for(bundle_id)).map_err(|e| e.to_string())?;
     // Without admin rights first (works when /usr/local/bin is the user's, e.g. an Intel Homebrew setup).
     let direct = Command::new("/usr/bin/install").args(["-m", "755"]).arg(&tmp).arg(TARGET).output();
     if !matches!(direct, Ok(ref o) if o.status.success()) {
@@ -64,13 +70,14 @@ pub fn install() -> Result<String, String> {
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn install() -> Result<String, String> {
+pub fn install(_bundle_id: &str) -> Result<String, String> {
     Err("Only needed on macOS: the Linux packages install the notepad command themselves.".into())
 }
 
 #[tauri::command]
-pub async fn install_cli() -> Result<String, String> {
-    tauri::async_runtime::spawn_blocking(install).await.map_err(|e| e.to_string())?
+pub async fn install_cli(app: tauri::AppHandle) -> Result<String, String> {
+    let id = app.config().identifier.clone();
+    tauri::async_runtime::spawn_blocking(move || install(&id)).await.map_err(|e| e.to_string())?
 }
 
 #[cfg(test)]
@@ -82,7 +89,8 @@ mod tests {
     #[test]
     fn script_makes_paths_absolute() {
         let d = tempfile::tempdir().unwrap();
-        let fake = SCRIPT.replace("exec open -n -b no.1011.notepad --args", "printf '%s\\n'");
+        assert!(script_for("no.1011.notepad.managed").contains("open -n -b no.1011.notepad.managed --args"));
+        let fake = script_for("x").replace("exec open -n -b x --args", "printf '%s\\n'");
         let script = d.path().join("notepad");
         std::fs::write(&script, fake).unwrap();
         let out = std::process::Command::new("/bin/sh")

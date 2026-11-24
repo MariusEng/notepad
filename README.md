@@ -111,6 +111,12 @@ All shortcuts, for macOS and Windows/Linux, are in **[SHORTCUTS.md](SHORTCUTS.md
 
 ## Development
 
+**Managed edition** (0.19.2): for organisations that install and update Notepad themselves (e.g. Company Portal).
+`VITE_NOTEPAD_MANAGED=1 npx tauri build --config src-tauri/tauri.managed.conf.json`: own app id
+(`no.1011.notepad.managed`: own settings and session), per-machine Windows installer (silent: `/S`), no update check
+(Help → Check for Updates says updates are managed by the organisation), "(managed)" in About (`src/edition.ts`).
+More `--config` files can be added after it. `deling-publish.sh` takes `DELING_SLUG`, `DELING_NAME`, `DELING_PASSWORD`.
+
 **macOS signing** (0.18.1): builds are signed with Notepad's own self-signed certificate so keychain access
 ("Always Allow") survives updates: `scripts/macos-signing-setup.sh` creates it once (Forgejo secrets + login-keychain
 backup), `scripts/with-signing-keychain.sh <build command>` uses it (CI and release-mac.sh). Without it: ad-hoc.

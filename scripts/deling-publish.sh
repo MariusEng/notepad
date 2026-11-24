@@ -9,6 +9,9 @@
 #   - this Mac: DELING_TOKEN in the environment, or the keychain item "deling-api-token"
 #     (security add-generic-password -s deling-api-token -a deling -w '<token>').
 # Without a token it says so and exits 0, so a release elsewhere isn't held up by it.
+#
+# Optional: DELING_SLUG (default notepad), DELING_NAME (default Notepad), DELING_PASSWORD (protects the page; deling
+# refuses an empty one, and a slug that moves keeps its password when none is given). Used by the managed edition.
 set -euo pipefail
 
 version="${1:?usage: deling-publish.sh <version> <readme> <file>...}"
@@ -34,9 +37,10 @@ done
 
 # --form-string: values are sent as they are (no @file / <file interpretation).
 out=$(curl -fsS --retry 2 -H "Authorization: Bearer $token" \
-  --form-string "name=Notepad" \
+  --form-string "name=${DELING_NAME:-Notepad}" \
   --form-string "version=$version" \
-  --form-string "slug=notepad" \
+  --form-string "slug=${DELING_SLUG:-notepad}" \
+  ${DELING_PASSWORD:+--form-string "password=$DELING_PASSWORD"} \
   -F "readme=@$readme" \
   "${args[@]}" \
   "${DELING_URL:-https://deling.1011.no}/api/releases")

@@ -48,5 +48,11 @@ jobs:
       - name: Build (frontend)
         run: npm run build
 
+      # The managed edition (src/edition.ts) must keep building; its config overlay must stay valid JSON.
+      - name: Build (managed frontend)
+        run: |
+          node -e 'JSON.parse(require("fs").readFileSync("src-tauri/tauri.managed.conf.json", "utf8"))'
+          VITE_NOTEPAD_MANAGED=1 npm run build
+
       - name: Rust tests
         run: cd src-tauri && cargo test

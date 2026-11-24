@@ -275,8 +275,8 @@ npx tauri build --bundles app,dmg      # release → src-tauri/target/release/bu
 The user installs by copying `Notepad.app` to /Applications. Quit the running copy before
 replacing it.
 
-## Status (2026-11-23, version 0.19.1)
-Latest (0.19.1): macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
+## Status (2026-11-24, version 0.19.2)
+Latest (0.19.2): managed build option. 0.19.1: macOS signing fix for the CI runner (0.18.1 + 0.19.0 never released). 0.19.0: macros. 0.18.1: macOS builds signed with a fixed self-signed certificate (needs the user to run scripts/macos-signing-setup.sh). 0.18.0: Extended search mode (Notepad++). 0.17.1: updates come from GitHub (0.17.0 checked deling). Not yet seen working end to end. 0.17.0: auto updates. 0.16.3: docs + test file removed. 0.16.2: GitHub PRs synced into Forgejo + ci.yml + branch protection. 0.16.1: GitHub copy + GitHub Releases via a GitHub App (needs the app + scripts/github-setup.sh once). 0.16.0: `notepad` command line tool (macOS). 0.15.0: SQLite databases (open, New Database, New Table, query with ⌘↵, results grid, Open as CSV, Save As copy).
 `cargo test` covers db.rs; typecheck/build clean. NOT yet checked by eye or run in `tauri dev`. 0.14.1: CHANGELOG.md drives release notes and the growing deling changelog. 0.14.0: preview tabs from the sidebar (single click previews, double click keeps). VERIFIED by the user
 (local build). 0.13.3: Help → Keyboard Shortcuts (SHORTCUTS.md). 0.13.2: macOS bundle ad-hoc signed (downloads were "damaged"). 0.13.1: persistent cargo build folders on the Mac runner; Linux CI image prepared (not in use yet).
 0.13.0: XML (highlighting, formatting, file types), JSON/XML validation, JSON/XML tree view.
@@ -319,8 +319,12 @@ a secret, so it stays token-based.
 - Fix whatever the user reports from using the app.
 - Managed edition for the user's workplace (planned 2026-11-24): signed builds without self-update, built in the
   separate PRIVATE repo git.1011.no/marius/notepad-eika from each release of this project. The plan (PLAN.md) and
-  all workplace details live there only, because this repo is copied to public GitHub. Work here: a "managed"
-  build option (no update check, per-machine installer). Also planned: password protection in marius/deling.
+  all workplace details live there only, because this repo is copied to public GitHub. DONE here (0.19.2): the
+  managed build option = `VITE_NOTEPAD_MANAGED=1` (src/edition.ts; updates.tsx short-circuits, the bundler drops
+  the update code; About "(managed)") + `--config src-tauri/tauri.managed.conf.json` (identifier
+  no.1011.notepad.managed, NSIS perMachine, updater endpoints [], no updater artifacts; Tauri refuses unknown keys
+  such as "$comment"). cli.rs writes the running app's own bundle id into /usr/local/bin/notepad. ci.yml builds the
+  managed frontend. deling-publish.sh: DELING_SLUG/NAME/PASSWORD. deling has password protection (done by the user).
 - TODO (reported 2026-11-23, 0.19.1): macro playback "until the end of the file" doesn't seem to stop at the end of the
   file. Check `playMacro` in editors/macro.tsx: it only stops when the cursor is at doc.length BEFORE a run, or when a
   run changes neither the text nor the cursor. Suspects: a macro that ends on the last line without reaching

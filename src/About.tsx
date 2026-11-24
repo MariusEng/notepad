@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { getVersion } from "@tauri-apps/api/app";
 import { git } from "./lib/backend";
+import { MANAGED } from "./edition";
 
 const useAbout = create<{ open: boolean }>(() => ({ open: false }));
 export const openAbout = () => useAbout.setState({ open: true });
@@ -41,7 +42,10 @@ export function AboutDialog() {
   return (
     <div className="picker-backdrop" onMouseDown={close}>
       <div className="dialog about" role="dialog" aria-label="About Notepad" onMouseDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.key === "Escape" && close()} tabIndex={-1} ref={(el) => el?.focus()}>
-        <h2>Notepad {version}</h2>
+        <h2>
+          Notepad {version}
+          {MANAGED ? " (managed)" : ""}
+        </h2>
         <p className="note">
           A minimal notepad with formatted Markdown, syntax highlighting and git sync. Open source under the MIT
           license.

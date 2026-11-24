@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.19.2 — 2026-11-24
+
+- A managed edition can be built for organisations that install and update Notepad themselves (no update check, installs for all users).
+
 ## 0.19.1 — 2026-11-23
 
 0.18.1 and 0.19.0 weren't published (the macOS build failed), so this is the first version with:
