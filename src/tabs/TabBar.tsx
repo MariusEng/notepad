@@ -97,7 +97,7 @@ export function TabBar() {
   // Which open files are in a git repository (re-checked after commits, pulls, new files, repo changes).
   const paths = useTabs((s) => s.tabs.map((t) => t.path ?? "").filter(Boolean).join("\n"));
   const treeVersion = useGit((s) => s.treeVersion);
-  const repoRoot = useGit((s) => s.repo?.root);
+  const repoRoot = useGit((s) => s.repos.map((r) => r.root).join("\n"));
   useSettings((s) => s.autoCommit); // re-render: the git mark's tooltip depends on it
   useEffect(() => {
     void refreshGitMarks(paths ? paths.split("\n") : []);

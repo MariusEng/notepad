@@ -1,12 +1,14 @@
 import { ask, open as pickFolder } from "@tauri-apps/plugin-dialog";
 import { create } from "zustand";
-import { files, isMac } from "../lib/backend";
+import { db, files, isMac } from "../lib/backend";
 import { useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
 import { useGit } from "../git/store";
-import { afterDelete, isInRepo, joinPath } from "../git/actions";
+import { afterDelete, closeRepo, joinPath, repoOf } from "../git/actions";
 import { newTab, openFiles } from "../actions";
 import type { GitPathInfo } from "../git/types";
+
+export type Kind = "file" | "folder" | "database";
 
 const notify = (text: string, kind: "info" | "error" = "info") => useTabs.getState().notify(text, kind);
 
@@ -20,24 +22,50 @@ export const refreshTrees = () => useGit.setState((s) => ({ treeVersion: s.treeV
 // ---------------------------------------------------------------- folder browser
 
 export async function openFolder() {
-  const dir = await pickFolder({ directory: true, multiple: false, title: "Open Folder" });
-  if (typeof dir === "string") useSettings.getState().update({ folderRoot: dir, sidebar: true });
+  const dirs = await pickFolder({ directory: true, multiple: true, title: "Open Folder" });
+  if (!dirs?.length) return;
+  const s = useSettings.getState();
+  s.update({
+    folders: [...new Set([...s.folders, ...dirs])],
+    collapsed: s.collapsed.filter((c) => !dirs.some((d) => c === `folder:${d}`)),
+    sidebar: true,
+  });
 }
 
-export const closeFolder = () => useSettings.getState().update({ folderRoot: null });
+export function closeFolder(root: string) {
+  const s = useSettings.getState();
+  s.update({ folders: s.folders.filter((f) => f !== root), collapsed: s.collapsed.filter((c) => c !== `folder:${root}`) });
+}
 
-/** On launch: forget the folder if it has been moved or deleted. */
-export async function restoreFolder() {
-  const root = useSettings.getState().folderRoot;
-  if (root) await files.listDir(root).catch(() => closeFolder());
+export function toggleSection(key: string) {
+  const s = useSettings.getState();
+  s.update({ collapsed: s.collapsed.includes(key) ? s.collapsed.filter((c) => c !== key) : [...s.collapsed, key] });
+}
+
+/** On launch: forget folders that have been moved or deleted. */
+export async function restoreFolders() {
+  for (const root of useSettings.getState().folders) await files.listDir(root).catch(() => closeFolder(root));
+}
+
+const DB_FILE = /\.(sqlite3?|db3?)$/i;
+
+/** New SQLite database. `db.create` replaces an existing file, so check first. */
+async function createDatabase(dir: string, name: string): Promise<string> {
+  if (!DB_FILE.test(name)) name += ".sqlite";
+  if (/[\\/]/.test(name)) throw `"${name}" isn't a valid name`;
+  const taken = (await files.listDir(dir)).some((e) => e.name.toLowerCase() === name.toLowerCase());
+  if (taken) throw `${name} already exists`;
+  const path = joinPath(dir, name);
+  await db.create(path);
+  return path;
 }
 
 /** Creates an empty file or folder in `dir`. Files open in a tab. Resolves to the new path, or null on failure. */
-export async function createEntry(dir: string, name: string, kind: "file" | "folder"): Promise<string | null> {
+export async function createEntry(dir: string, name: string, kind: Kind): Promise<string | null> {
   try {
-    const path = kind === "file" ? await files.createFile(dir, name) : await files.createDir(dir, name);
+    const path = await (kind === "folder" ? files.createDir : kind === "database" ? createDatabase : files.createFile)(dir, name);
     refreshTrees();
-    if (kind === "file") await openFiles([path]);
+    if (kind !== "folder") await openFiles([path]);
     return path;
   } catch (e) {
     notify(String(e), "error");
@@ -55,12 +83,12 @@ export const trashLabel = isMac ? "Move to Trash" : "Delete";
 
 /**
  * Moves a file or folder to the Trash after asking. Open tabs of those files close (ones with unsaved edits stay
- * open and show that the file is gone). In the open repository the removal is committed and pushed.
+ * open and show that the file is gone). In an open repository the removal is committed and pushed.
  */
 export async function deleteEntry(path: string, isDir: boolean) {
   const name = baseName(path);
-  const { repo } = useGit.getState();
-  const synced = !!repo && useSettings.getState().autoCommit && isInRepo(repo.root, path);
+  const repo = repoOf(path);
+  const synced = !!repo && useSettings.getState().autoCommit;
   const what = isDir ? `the folder "${name}" and everything in it` : `"${name}"`;
   const bin = isMac ? "the Trash" : "the Recycle Bin";
   const detail = synced
@@ -86,8 +114,8 @@ export async function deleteEntry(path: string, isDir: boolean) {
     else tabs.removeTab(t.id);
   }
   if (useTabs.getState().tabs.length === 0) newTab();
-  const folder = useSettings.getState().folderRoot;
-  if (folder && under(path, folder)) closeFolder();
+  for (const f of useSettings.getState().folders) if (under(path, f)) closeFolder(f);
+  for (const r of useGit.getState().repos) if (under(path, r.root)) closeRepo(r.root);
   refreshTrees();
   afterDelete(path);
 }
@@ -111,8 +139,8 @@ const norm = (p: string) => p.replace(/\\/g, "/").replace(/\/+$/, "");
 
 /** Tooltip for a file's git mark: says whether saving pushes it, and to keep secrets out. */
 export function gitMarkText(mark: GitPathInfo): string {
-  const { repo } = useGit.getState();
-  const syncs = !!repo && norm(repo.root) === norm(mark.root) && useSettings.getState().autoCommit;
+  const open = useGit.getState().repos.some((r) => norm(r.root) === norm(mark.root));
+  const syncs = open && useSettings.getState().autoCommit;
   const state = mark.tracked ? "" : " (not committed yet)";
   return syncs
     ? `In git: ${mark.name}${state}. Saving commits and pushes this file, so don't put secrets in it.`

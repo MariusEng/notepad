@@ -1,48 +1,134 @@
-import { createContext, useContext, useEffect, useRef, useState, type RefObject } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Menu } from "@tauri-apps/api/menu";
 import { files, git } from "../lib/backend";
-import { useSettings } from "../settings";
+import { SIDEBAR_WIDTH, useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
 import { openFiles } from "../actions";
-import { showBranchMenu, toggleSidebar } from "../git/actions";
-import { useGit } from "../git/store";
-import type { DirEntry, GitPathInfo } from "../git/types";
-import { baseName, closeFolder, createEntry, deleteEntry, openFolder, pathIn, trashLabel } from "./actions";
+import { LANGUAGE_LIST } from "../editors/languages";
+import { activateRepo, closeRepo, openRepoFolder, showBranchMenu, syncNow, toggleSidebar } from "../git/actions";
+import { syncOf, useGit } from "../git/store";
+import type { DirEntry, GitPathInfo, RepoInfo } from "../git/types";
+import { baseName, closeFolder, createEntry, deleteEntry, openFolder, pathIn, toggleSection, trashLabel, type Kind } from "./actions";
 
 /**
- * Left sidebar: the open git repository on top, the open folder below (either can be absent). Both are quiet file
- * trees: click a file to open it, right-click for New File / New Folder.
+ * Left sidebar: a collapsible section per open git repository, then one per open folder, each a quiet file tree.
+ * Click a file to open it, right-click for New File / New Folder, × closes the section.
  */
 export function Sidebar() {
-  const repo = useGit((s) => s.repo);
-  const folder = useSettings((s) => s.folderRoot);
+  const repos = useGit((s) => s.repos);
+  const folders = useSettings((s) => s.folders);
   const visible = useSettings((s) => s.sidebar);
-  const ratio = useSettings((s) => s.sidebarSplit);
-  const aside = useRef<HTMLElement>(null);
-  if ((!repo && !folder) || !visible) return null;
-  const both = !!repo && !!folder;
+  const width = useSettings((s) => s.sidebarWidth);
+  if ((!repos.length && !folders.length) || !visible) return null;
   return (
-    <aside className="sidebar" ref={aside} aria-label="Files">
-      {repo && (
-        <section className="sb-section" style={both ? { flex: `${ratio} 1 0` } : undefined} aria-label="Repository">
-          <div className="sb-head">
-            <button className="sb-title" title={`${repo.root}\nBranches, pull request, close repository`} onClick={() => void showBranchMenu()}>
-              <span className="sb-repo">{repo.name}</span>
-              <span className="sb-branch">{repo.branch ?? "(no branch)"} ▾</span>
-            </button>
-            <HideButton />
-          </div>
-          <Tree root={repo.root} list={(rel) => git.listDir(repo.root, rel)} />
-        </section>
-      )}
-      {both && <SectionDivider container={aside} />}
-      {folder && (
-        <section className="sb-section" style={both ? { flex: `${1 - ratio} 1 0` } : undefined} aria-label="Folder">
-          <FolderHead root={folder} hide={!repo} />
-          <Tree root={folder} list={(rel) => files.listDir(pathIn(folder, rel))} />
-        </section>
-      )}
+    <aside className="sidebar" style={{ width }} aria-label="Files">
+      <div className="sb-top">
+        <HideButton />
+      </div>
+      <div className="sb-scroll">
+        {repos.map((r) => (
+          <RepoSection key={r.root} repo={r} />
+        ))}
+        {folders.map((f) => (
+          <FolderSection key={f} root={f} />
+        ))}
+      </div>
+      <WidthHandle />
     </aside>
+  );
+}
+
+/** Collapsible header + tree. The tree stays mounted while collapsed, so it keeps its open folders. */
+function Section(props: {
+  id: string;
+  root: string;
+  name: string;
+  list: (rel: string) => Promise<DirEntry[]>;
+  extra?: ReactNode;
+  closeLabel: string;
+  onClose: () => void;
+  /** Extra items for the header's right-click menu. */
+  menu: { id: string; text: string; action: () => void }[];
+}) {
+  const { id, root, name, list, extra, closeLabel, onClose } = props;
+  const open = useSettings((s) => !s.collapsed.includes(id));
+  const menu = async () => {
+    const start = (c: Creating) => {
+      if (!open) toggleSection(id);
+      starters.get(id)?.(c);
+    };
+    const m = await Menu.new({
+      items: [
+        ...newItems("", "", start),
+        { item: "Separator" as const },
+        ...props.menu,
+        { id: "section-close", text: closeLabel, action: onClose },
+      ],
+    });
+    await m.popup();
+  };
+  return (
+    <section className="sb-section" aria-label={name}>
+      <div
+        className="sb-head"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          void menu();
+        }}
+      >
+        <button className="sb-title" title={root} aria-expanded={open} onClick={() => toggleSection(id)}>
+          <span className="sb-caret">{open ? "▾" : "▸"}</span>
+          <span className="sb-repo">{name}</span>
+        </button>
+        {extra}
+        <button className="sb-x sb-close" title={closeLabel} aria-label={`${closeLabel}: ${name}`} onClick={onClose}>
+          <svg viewBox="0 0 16 16" aria-hidden>
+            <path d="M4.5 4.5l7 7m0-7l-7 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div hidden={!open}>
+        <Tree id={id} root={root} list={list} />
+      </div>
+    </section>
+  );
+}
+
+function RepoSection({ repo }: { repo: RepoInfo }) {
+  const sync = useGit(syncOf(repo.root));
+  const trouble = ["error", "conflict", "auth"].includes(sync.state);
+  return (
+    <Section
+      id={`repo:${repo.root}`}
+      root={repo.root}
+      name={repo.name}
+      list={(rel) => git.listDir(repo.root, rel)}
+      closeLabel="Close Repository"
+      onClose={() => closeRepo(repo.root)}
+      menu={[
+        { id: "section-sync", text: "Sync Now", action: () => void syncNow(false, repo.root) },
+        { id: "section-open", text: "Open Another Repository…", action: () => void openRepoFolder() },
+      ]}
+      extra={
+        <>
+          {trouble && (
+            <button className="sb-chip sb-warn" title={`${sync.message}\nClick to sync now`} onClick={() => void syncNow(false, repo.root)}>
+              ⚠
+            </button>
+          )}
+          <button
+            className="sb-chip"
+            title="Branches, pull request, sync"
+            onClick={() => {
+              activateRepo(repo.root);
+              void showBranchMenu(repo.root);
+            }}
+          >
+            {repo.branch ?? "(no branch)"}
+          </button>
+        </>
+      }
+    />
   );
 }
 
@@ -71,7 +157,7 @@ export function GitGlyph({ title }: { title: string }) {
   );
 }
 
-function FolderHead({ root, hide }: { root: string; hide: boolean }) {
+function FolderSection({ root }: { root: string }) {
   const version = useGit((s) => s.treeVersion);
   const [mark, setMark] = useState<GitPathInfo | null>(null);
   useEffect(() => {
@@ -85,67 +171,59 @@ function FolderHead({ root, hide }: { root: string; hide: boolean }) {
     };
   }, [root, version]);
 
-  const menu = async () => {
-    const m = await Menu.new({
-      items: [
-        { id: "folder-new-file", text: "New File…", action: () => startCreate(root, "", "file") },
-        { id: "folder-new-dir", text: "New Folder…", action: () => startCreate(root, "", "folder") },
-        { item: "Separator" as const },
-        { id: "folder-open", text: "Open Another Folder…", action: () => void openFolder() },
-        { id: "folder-close", text: "Close Folder", action: closeFolder },
-      ],
-    });
-    await m.popup();
-  };
-
   return (
-    <div className="sb-head">
-      <button className="sb-title" title={`${root}\nNew file or folder, open another folder, close`} onClick={() => void menu()}>
-        <span className="sb-repo">{baseName(root)}</span>
-        {mark && <GitGlyph title={`This folder is in git repository ${mark.name}: files you add can be committed and pushed, so don't put secrets in them.`} />}
-        <span className="sb-branch">▾</span>
-      </button>
-      {hide && <HideButton />}
-    </div>
+    <Section
+      id={`folder:${root}`}
+      root={root}
+      name={baseName(root)}
+      list={(rel) => files.listDir(pathIn(root, rel))}
+      closeLabel="Close Folder"
+      onClose={() => closeFolder(root)}
+      menu={[{ id: "section-open", text: "Open Another Folder…", action: () => void openFolder() }]}
+      extra={
+        mark && <GitGlyph title={`This folder is in git repository ${mark.name}: files you add can be committed and pushed, so don't put secrets in them.`} />
+      }
+    />
   );
 }
 
-/** Drag to share the sidebar's height between the repository and the folder; double-click for half and half. */
-function SectionDivider({ container }: { container: RefObject<HTMLElement | null> }) {
+/** Drag the sidebar's right edge to resize it; double-click for the default width. */
+function WidthHandle() {
   const onDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    const rect = container.current?.getBoundingClientRect();
-    if (!rect) return;
-    const set = (r: number) => useSettings.setState({ sidebarSplit: Math.min(0.85, Math.max(0.15, r)) });
-    const move = (ev: MouseEvent) => set((ev.clientY - rect.top) / rect.height);
+    const left = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect().left;
+    const move = (ev: MouseEvent) =>
+      useSettings.setState({ sidebarWidth: Math.round(Math.max(140, Math.min(ev.clientX - left, window.innerWidth * 0.6))) });
     const up = () => {
       window.removeEventListener("mousemove", move);
       window.removeEventListener("mouseup", up);
-      document.body.classList.remove("resizing-v");
-      useSettings.getState().update({ sidebarSplit: useSettings.getState().sidebarSplit }); // persist once
+      document.body.classList.remove("resizing");
+      useSettings.getState().update({ sidebarWidth: useSettings.getState().sidebarWidth }); // persist once
     };
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
-    document.body.classList.add("resizing-v");
+    document.body.classList.add("resizing");
   };
   return (
     <div
-      className="sb-divider"
+      className="sb-resize"
       role="separator"
-      aria-orientation="horizontal"
+      aria-orientation="vertical"
+      title="Drag to resize"
       onMouseDown={onDown}
-      onDoubleClick={() => useSettings.getState().update({ sidebarSplit: 0.5 })}
+      onDoubleClick={() => useSettings.getState().update({ sidebarWidth: SIDEBAR_WIDTH })}
     />
   );
 }
 
 // ---------------------------------------------------------------- tree
 
-type Kind = "file" | "folder";
 interface Creating {
   /** Folder (relative to the tree's root, "" = root) that gets the new item. */
   dir: string;
   kind: Kind;
+  /** The name the field starts with. */
+  name: string;
 }
 
 interface TreeCtx {
@@ -158,19 +236,36 @@ interface TreeCtx {
 }
 const Ctx = createContext<TreeCtx>(null!);
 
-/** "New File…" from outside a tree (the folder header menu) reaches the tree with this root. */
-const starters = new Map<string, (dir: string, kind: Kind) => void>();
-const startCreate = (root: string, dir: string, kind: Kind) => starters.get(root)?.(dir, kind);
+/** "New File" from a section's header menu reaches its tree through this (by section id). */
+const starters = new Map<string, (c: Creating) => void>();
 
-function Tree({ root, list }: { root: string; list: (rel: string) => Promise<DirEntry[]> }) {
+/** New File (submenu: the type) and New Folder, for a right-click menu. */
+function newItems(dir: string, where: string, start: (c: Creating) => void) {
+  return [
+    {
+      id: "tree-new-file",
+      text: `New File${where}`,
+      items: [
+        ...LANGUAGE_LIST.map((l) => ({
+          id: `tree-new-${l.id}`,
+          text: `${l.label} (.${l.extensions[0]})`,
+          action: () => start({ dir, kind: "file", name: `Untitled.${l.extensions[0]}` }),
+        })),
+        { item: "Separator" as const },
+        {
+          id: "tree-new-sqlite",
+          text: "SQLite Database (.sqlite)",
+          action: () => start({ dir, kind: "database", name: "Untitled.sqlite" }),
+        },
+      ],
+    },
+    { id: "tree-new-dir", text: `New Folder${where}…`, action: () => start({ dir, kind: "folder", name: "New Folder" }) },
+  ];
+}
+
+function Tree({ id, root, list }: { id: string; root: string; list: (rel: string) => Promise<DirEntry[]> }) {
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [creating, setCreatingState] = useState<Creating | null>(null);
-
-  // Opening another folder starts collapsed.
-  useEffect(() => {
-    setExpanded(new Set());
-    setCreatingState(null);
-  }, [root]);
 
   const setOpen = (rel: string, open: boolean) =>
     setExpanded((s) => {
@@ -187,9 +282,9 @@ function Tree({ root, list }: { root: string; list: (rel: string) => Promise<Dir
   };
 
   useEffect(() => {
-    starters.set(root, (dir, kind) => setCreating({ dir, kind }));
-    return () => void starters.delete(root);
-  }, [root]);
+    starters.set(id, setCreating);
+    return () => void starters.delete(id);
+  }, [id]);
 
   return (
     <Ctx.Provider value={{ root, list, expanded, setOpen, creating, setCreating }}>
@@ -223,8 +318,7 @@ async function entryMenu(root: string, rel: string, entry: DirEntry | null, setC
             { item: "Separator" as const },
           ]
         : []),
-      { id: "tree-new-file", text: `New File${where}…`, action: () => setCreating({ dir, kind: "file" }) },
-      { id: "tree-new-dir", text: `New Folder${where}…`, action: () => setCreating({ dir, kind: "folder" }) },
+      ...newItems(dir, where, setCreating),
       ...(entry
         ? [
             { item: "Separator" as const },
@@ -256,7 +350,7 @@ function Children({ rel, depth }: { rel: string; depth: number }) {
 
   return (
     <>
-      {creating?.dir === rel && <NewItemRow depth={depth} kind={creating.kind} />}
+      {creating?.dir === rel && <NewItemRow key={creating.name} depth={depth} kind={creating.kind} initial={creating.name} />}
       {items?.map((e) => (
         <Node key={e.name} rel={rel ? `${rel}/${e.name}` : e.name} entry={e} depth={depth} />
       ))}
@@ -294,18 +388,17 @@ function Node({ rel, entry, depth }: { rel: string; entry: DirEntry; depth: numb
 }
 
 /** Inline name field for a new file or folder: Enter creates it, Escape (or clicking elsewhere) cancels. */
-function NewItemRow({ depth, kind }: { depth: number; kind: Kind }) {
+function NewItemRow({ depth, kind, initial }: { depth: number; kind: Kind; initial: string }) {
   const { root, creating, setCreating, setOpen } = useContext(Ctx);
   const input = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
-  const initial = kind === "file" ? "Untitled.md" : "New Folder";
 
   useEffect(() => {
     const el = input.current;
     if (!el) return;
     el.focus();
     // Select the name without the extension, so typing keeps ".md".
-    const dot = kind === "file" ? initial.lastIndexOf(".") : -1;
+    const dot = kind !== "folder" ? initial.lastIndexOf(".") : -1;
     el.setSelectionRange(0, dot > 0 ? dot : initial.length);
   }, [kind]);
 
@@ -330,7 +423,7 @@ function NewItemRow({ depth, kind }: { depth: number; kind: Kind }) {
         ref={input}
         className="sb-input"
         defaultValue={initial}
-        aria-label={kind === "file" ? "New file name" : "New folder name"}
+        aria-label={kind === "folder" ? "New folder name" : "New file name"}
         spellCheck={false}
         autoCapitalize="off"
         autoCorrect="off"

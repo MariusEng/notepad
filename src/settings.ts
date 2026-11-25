@@ -4,6 +4,9 @@ import { setThemePref, type ThemePref } from "./theme/theme";
 import type { Account } from "./git/types";
 import type { MacroStep } from "./editors/macroBus";
 
+/** Default sidebar width (px). */
+export const SIDEBAR_WIDTH = 220;
+
 interface SettingsData {
   theme: ThemePref;
   /** Fixed formatting bar under the tabs (greyed out unless a Markdown document is in formatted view). */
@@ -12,12 +15,14 @@ interface SettingsData {
   sidebar: boolean;
   /** Saving a file in the open repository commits and pushes it. */
   autoCommit: boolean;
-  /** The repository to reopen on launch. */
-  repoRoot: string | null;
-  /** The folder shown in the sidebar's folder browser (reopened on launch). */
-  folderRoot: string | null;
-  /** Share of the sidebar height used by the repository when both it and a folder are shown (0.15–0.85). */
-  sidebarSplit: number;
+  /** The repositories in the sidebar (reopened on launch). */
+  repos: string[];
+  /** The folders in the sidebar, below the repositories (reopened on launch). */
+  folders: string[];
+  /** Collapsed sidebar sections ("repo:<root>" / "folder:<root>"). */
+  collapsed: string[];
+  /** Sidebar width in pixels. */
+  sidebarWidth: number;
   /** Git accounts (the secrets are in the OS keychain, not here). */
   accounts: Account[];
   /** Look for a new version at launch and once a day (updates.tsx). */
@@ -27,7 +32,7 @@ interface SettingsData {
   macros: { name: string; steps: MacroStep[] }[];
 }
 
-type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repoRoot" | "folderRoot" | "sidebarSplit" | "accounts" | "autoUpdates" | "lastMacro" | "macros">;
+type GitPrefs = Pick<SettingsData, "sidebar" | "autoCommit" | "repos" | "folders" | "collapsed" | "sidebarWidth" | "accounts" | "autoUpdates" | "lastMacro" | "macros">;
 
 interface Settings extends SettingsData {
   setTheme: (t: ThemePref) => void;
@@ -44,9 +49,10 @@ const persist = (s: SettingsData) =>
         showFormatBar: s.formatBar,
         sidebar: s.sidebar,
         autoCommit: s.autoCommit,
-        repoRoot: s.repoRoot,
-        folderRoot: s.folderRoot,
-        sidebarSplit: s.sidebarSplit,
+        repos: s.repos,
+        folders: s.folders,
+        collapsed: s.collapsed,
+        sidebarWidth: s.sidebarWidth,
         accounts: s.accounts,
         autoUpdates: s.autoUpdates,
         lastMacro: s.lastMacro,
@@ -60,9 +66,10 @@ export const useSettings = create<Settings>((set, get) => ({
   formatBar: true,
   sidebar: true,
   autoCommit: true,
-  repoRoot: null,
-  folderRoot: null,
-  sidebarSplit: 0.5,
+  repos: [],
+  folders: [],
+  collapsed: [],
+  sidebarWidth: SIDEBAR_WIDTH,
   accounts: [],
   autoUpdates: true,
   lastMacro: null,
@@ -85,14 +92,16 @@ export const useSettings = create<Settings>((set, get) => ({
 export async function loadSettings() {
   try {
     const raw = await backend.loadState("settings");
-    const data: Partial<GitPrefs> & { theme?: ThemePref; showFormatBar?: boolean } = raw ? JSON.parse(raw) : {};
+    const data: Partial<GitPrefs> & { theme?: ThemePref; showFormatBar?: boolean; repoRoot?: string | null; folderRoot?: string | null } = raw ? JSON.parse(raw) : {};
     useSettings.setState({
       formatBar: data.showFormatBar ?? true,
       sidebar: data.sidebar ?? true,
       autoCommit: data.autoCommit ?? true,
-      repoRoot: data.repoRoot ?? null,
-      folderRoot: data.folderRoot ?? null,
-      sidebarSplit: typeof data.sidebarSplit === "number" ? data.sidebarSplit : 0.5,
+      // Before 0.21.0 there was one of each (repoRoot, folderRoot).
+      repos: Array.isArray(data.repos) ? data.repos : data.repoRoot ? [data.repoRoot] : [],
+      folders: Array.isArray(data.folders) ? data.folders : data.folderRoot ? [data.folderRoot] : [],
+      collapsed: Array.isArray(data.collapsed) ? data.collapsed : [],
+      sidebarWidth: typeof data.sidebarWidth === "number" ? data.sidebarWidth : SIDEBAR_WIDTH,
       accounts: Array.isArray(data.accounts) ? data.accounts : [],
       autoUpdates: data.autoUpdates ?? true,
       lastMacro: Array.isArray(data.lastMacro) ? data.lastMacro : null,

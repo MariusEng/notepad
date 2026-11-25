@@ -8,6 +8,7 @@ import { useTabs, type Tab } from "../tabs/store";
 import { toggleSource } from "../actions";
 import { createMdFormat } from "./mdFormat";
 import { showableImageUrl } from "./imagePaths";
+import { allowEmptyContainers, plainEmptyParagraphs, separateBrLines } from "./emptyLines";
 
 const readAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -36,7 +37,7 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
 
     const crepe = new Crepe({
       root: host.current!,
-      defaultValue: tab.content,
+      defaultValue: separateBrLines(tab.content),
       features: {
         // The formatting bar is app-level (FormatBar), not inside the editor.
         [Crepe.Feature.TopBar]: false,
@@ -58,6 +59,8 @@ export function MarkdownEditor({ tab }: { tab: Tab }) {
         },
       },
     });
+
+    crepe.editor.config(allowEmptyContainers).use(plainEmptyParagraphs);
 
     crepe.on((api) => {
       api.markdownUpdated((_ctx, markdown) => {

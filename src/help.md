@@ -21,7 +21,8 @@ A minimal notepad. Markdown is the default: you edit formatted text and the file
 - Formatted editing: select text for a floating toolbar, type `/` for blocks, or use Markdown shortcuts (`## `, `- `, `> `, `**bold**`). The formatting bar under the tabs can be hidden in the View menu.
 - HTML files open in a **preview** (scripts don't run in it). While you edit the source, the status bar button says **Preview**; click it (or press ⌘/ · Ctrl+/) to see the page, and **Source** to go back.
 - **⌘/** (Ctrl+/) switches Markdown between the formatted view and the **source**.
-- **Images with relative paths** (`![](images/photo.png)`, `../shared/logo.svg`) show in the formatted view, read from the document's folder. The Markdown keeps the path as you wrote it. Pasted or dropped images are embedded in the file.
+- **Images with relative paths** (`![](images/photo.png)`, `../shared/logo.svg`) show in the formatted view, read from the document's folder. The Markdown keeps the path as you wrote it. Saving commits only the document, so commit linked image files yourself. Pasted or dropped images are embedded in the file.
+- Files stay plain Markdown: empty paragraphs in the formatted view aren't saved.
 
 ## Code
 
@@ -109,19 +110,19 @@ Select a rectangle of text across several lines, for example one column of a CSV
 
 ## Sidebar: folders and repositories
 
-- **File → Open Folder…** (⌥⌘O · Ctrl+Alt+O) shows any folder in the sidebar. With a repository open too, the repository is on top and the folder below; drag the line between them to share the height (double-click: half and half).
+- **File → Open Folder…** (⌥⌘O · Ctrl+Alt+O) adds folders to the sidebar; open as many as you like. Repositories are listed first, folders below. Click a name to **collapse or expand** it, **×** closes it (nothing is deleted).
+- **Drag the sidebar's right edge** to resize it; double-click the edge for the default width.
 - **Click a file** to preview it: its tab title is in *italics*, and clicking the next file replaces that tab, so browsing doesn't fill the tab bar. **Double-click** a file to open it for good (it stays when you click the next one). A preview tab also stays as soon as you edit it, or when you double-click its tab.
-- **Right-click** a file or folder in either tree for **New File…** and **New Folder…** (created in the folder you clicked, or next to the file). Type the name and press Enter; Esc cancels. New files open in a tab. Right-clicking empty space creates at the top level.
-- Click the folder's name for New File, New Folder, Open Another Folder and Close Folder.
-- **Delete**: right-click a file or folder → **Move to Trash…** (Windows/Linux: **Delete…**). It asks first and goes to the Trash (Recycle Bin), so it can be restored. In the open repository the deletion is also committed and pushed. Open tabs of deleted files close; a tab with unsaved edits stays open and says the file is gone.
+- **Right-click** a file or folder for **New File** (choose the type in the submenu) and **New Folder…** (created in the folder you clicked, or next to the file). Type the name and press Enter; Esc cancels. New files open in a tab. Right-click a section's name to create at the top level.
+- **Delete**: right-click a file or folder → **Move to Trash…** (Windows/Linux: **Delete…**). It asks first and goes to the Trash (Recycle Bin), so it can be restored. In an open repository the deletion is also committed and pushed. Open tabs of deleted files close; a tab with unsaved edits stays open and says the file is gone.
 - **Files in git are marked**: a tab whose file is in a git repository (and not ignored) shows an orange git mark, so you know not to put passwords or other secrets in it. Hover the mark to see which repository, and whether saving commits and pushes it. A folder that is inside a repository shows the same mark next to its name.
 
 ## Git repositories
 
-- **File → Open Repository…** (⇧⌘O) opens any folder inside a git repository. Its files are listed at the top of the sidebar.
+- **File → Open Repository…** (⇧⌘O) opens any folder inside a git repository. Its files are listed at the top of the sidebar. Several repositories can be open: saving commits to the repository the file is in, and the status bar shows the repository of the active tab.
 - **Hide or show the sidebar** with the button at its top right, the button at the left of the status bar, or **⇧⌘E** (Ctrl+Shift+E).
 - **Saving commits and pushes** the saved file. Turn this off under View → *Auto Commit & Push on Save*.
-- **Branches**: click the repository name in the sidebar, or the branch name in the status bar, to switch branch, create a new one, or open a pull request. Branches that only exist on the server are under *Remote Branches*.
+- **Branches**: click the branch name in the sidebar or the status bar to switch branch, create a new one, or open a pull request. Branches that only exist on the server are under *Remote Branches*.
 - **Protected branches**: if the server doesn't accept pushes to `main`/`master`, Notepad offers to move your unpushed commits to a new branch, push it, and open a pull request. Nothing is lost either way.
 - Conflicting changes from the server are never applied: your commits stay local and the status bar shows a warning.
 - **File → Git Accounts…** manages sign-ins (token or browser sign-in). Only HTTPS remotes are supported.

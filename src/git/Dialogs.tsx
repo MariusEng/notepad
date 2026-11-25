@@ -12,7 +12,7 @@ import {
   openRepo,
   pullRequestLink,
 } from "./actions";
-import { useGit } from "./store";
+import { currentRepo, syncOf, useGit } from "./store";
 import {
   PROVIDERS,
   builtinClient,
@@ -38,8 +38,8 @@ export function GitDialogs() {
         {dialog.kind === "accounts" && <AccountsDialog host={dialog.host} />}
         {dialog.kind === "newRepo" && <NewRepoDialog />}
         {dialog.kind === "clone" && <CloneDialog />}
-        {dialog.kind === "newBranch" && <NewBranchDialog />}
-        {dialog.kind === "pushRejected" && <PushRejectedDialog branch={dialog.branch} reason={dialog.reason} />}
+        {dialog.kind === "newBranch" && <NewBranchDialog root={dialog.root} />}
+        {dialog.kind === "pushRejected" && <PushRejectedDialog root={dialog.root} branch={dialog.branch} reason={dialog.reason} />}
       </div>
     </div>
   );
@@ -490,8 +490,10 @@ function suggestBranch(prefix: string) {
   return `${prefix}/${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-function NewBranchDialog() {
-  const repo = useGit((s) => s.repo);
+function NewBranchDialog({ root }: { root?: string }) {
+  // Fixed when the dialog opens: the current repository may change behind it.
+  const [target] = useState(() => root ?? currentRepo(useGit.getState())?.root);
+  const repo = useGit((s) => s.repos.find((r) => r.root === target));
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -500,7 +502,8 @@ function NewBranchDialog() {
     setError("");
     setBusy(true);
     try {
-      await createBranch(name);
+      if (!repo) throw "Open a repository first (File → Open Repository…)";
+      await createBranch(repo.root, name);
       closeDialog();
     } catch (e) {
       setError(String(e));
@@ -511,7 +514,7 @@ function NewBranchDialog() {
 
   return (
     <>
-      <h2>New branch</h2>
+      <h2>New branch{repo ? ` in ${repo.name}` : ""}</h2>
       <p className="note">
         Starts from the current commit{repo?.branch ? ` on ${repo.branch}` : ""} and switches to it. Your files stay as they are; new
         saves are committed and pushed to the new branch.
@@ -540,8 +543,8 @@ function NewBranchDialog() {
   );
 }
 
-function PushRejectedDialog({ branch, reason }: { branch: string; reason: string }) {
-  const repo = useGit((s) => s.repo);
+function PushRejectedDialog({ root, branch, reason }: { root: string; branch: string; reason: string }) {
+  const repo = useGit((s) => s.repos.find((r) => r.root === root));
   const [name, setName] = useState(() => suggestBranch("notes"));
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -551,8 +554,9 @@ function PushRejectedDialog({ branch, reason }: { branch: string; reason: string
     setError("");
     setBusy(true);
     try {
-      await moveToNewBranch(name);
-      if (useGit.getState().sync.state === "error") setError(useGit.getState().sync.message);
+      await moveToNewBranch(root, name);
+      const sync = syncOf(root)(useGit.getState());
+      if (sync.state === "error") setError(sync.message);
       else setDone(true);
     } catch (e) {
       setError(String(e));
@@ -562,7 +566,7 @@ function PushRejectedDialog({ branch, reason }: { branch: string; reason: string
   };
 
   if (done) {
-    const pr = pullRequestLink();
+    const pr = pullRequestLink(repo ?? null);
     return (
       <>
         <h2>Pushed to {repo?.branch}</h2>
@@ -579,7 +583,7 @@ function PushRejectedDialog({ branch, reason }: { branch: string; reason: string
             <button
               className="btn primary"
               onClick={() => {
-                openPullRequest();
+                openPullRequest(root);
                 closeDialog();
               }}
             >
@@ -593,7 +597,7 @@ function PushRejectedDialog({ branch, reason }: { branch: string; reason: string
 
   return (
     <>
-      <h2>The server doesn't accept pushes to {branch}</h2>
+      <h2>The server doesn't accept pushes to {branch}{repo ? ` in ${repo.name}` : ""}</h2>
       <p className="note">
         Many repositories protect their main branch: changes go in through a branch and a pull request. Your commits are
         saved locally and nothing is lost.
@@ -614,7 +618,7 @@ function PushRejectedDialog({ branch, reason }: { branch: string; reason: string
           className="btn ghost"
           title={`Keep committing to ${branch} locally without asking again this session`}
           onClick={() => {
-            keepCommittingTo(branch);
+            keepCommittingTo(root, branch);
             closeDialog();
           }}
         >

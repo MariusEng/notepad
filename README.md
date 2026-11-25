@@ -70,10 +70,10 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
 - **Split view**: right-click a tab → **Open to the Right** to see two files side by side
   (drag the divider to resize, double-click it to reset; **Close Split View** in the tab menu or View menu).
   The formatting bar, status bar and shortcuts follow whichever pane has the focus. The split is restored on launch.
-- **Sidebar with a folder browser** (File → Open Folder…, ⌥⌘O): any folder, shown under the repository when
-  one is open (drag the line between them to resize). Right-click in either tree → **New File…** / **New Folder…**
+- **Sidebar with folders and repositories** (File → Open Folder…, ⌥⌘O): any number of each, as collapsible sections
+  with an × to close; drag the sidebar's right edge to resize it. Right-click → **New File** (submenu: type) / **New Folder…**
   (inline name field; new files open in a tab). A single click on a file opens a **preview tab** (italic title)
-  that the next click replaces; a double click (or editing it, or double-clicking the tab) keeps it open and **Move to Trash…** (asks first; in the open repository the
+  that the next click replaces; a double click (or editing it, or double-clicking the tab) keeps it open and **Move to Trash…** (asks first; in an open repository the
   deletion is committed and pushed).
 - **Git mark on tabs**: files inside a git repository (not ignored) get an orange git mark in the tab bar, so
   it's obvious which files are committed and pushed and shouldn't hold secrets. The tooltip names the repository.
@@ -86,7 +86,7 @@ hour), tested by its CI, merged there, and then show up here as merged. GitHub's
   (access token, or **Sign in with browser**: one click on github.com (device code) and on Forgejo/Gitea servers (built-in OAuth app for git tools); other providers use an OAuth app you register: device code for GitHub/GitLab).
   Credentials are looked up in the app's own account store (OS keychain), then in your git credential manager.
   Only HTTPS remotes are supported. View → *Auto Commit & Push on Save* turns the automatic commit off.
-- **Branches**: click the repository name (sidebar) or the branch (status bar) to switch branch, create one,
+- **Branches**: click the branch name (sidebar or status bar) to switch branch, create one,
   or open a pull request. If the server refuses pushes to a protected `main`/`master`, Notepad offers to move the
   unpushed commits to a new branch, push it and open a pull request. Hide the sidebar with its top-right button.
 - **Updates**: Help → Check for Updates… and a daily check (status bar "Update to …"); downloads from GitHub

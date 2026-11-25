@@ -5,12 +5,14 @@ import { useSettings } from "../settings";
 import { useTabs } from "../tabs/store";
 import { openFiles } from "../actions";
 import { checkExternalChanges } from "../session/session";
-import { useGit, type Dialog, type SyncState } from "./store";
+import { currentRepo, useGit, type Dialog, type SyncState } from "./store";
 import { guessProvider, hostOf, pullRequestUrl, type Account, type RepoInfo, type SyncResult } from "./types";
 
 const notify = (text: string, kind: "info" | "error" = "info") => useTabs.getState().notify(text, kind);
-const setSync = (state: SyncState, message = "", conflicts: string[] = []) =>
-  useGit.setState({ sync: { state, message, conflicts, at: Date.now() } });
+const setSync = (root: string, state: SyncState, message = "", conflicts: string[] = []) =>
+  useGit.setState((s) => ({ syncs: { ...s.syncs, [root]: { state, message, conflicts, at: Date.now() } } }));
+const current = () => currentRepo(useGit.getState());
+const repoAt = (root: string) => useGit.getState().repos.find((r) => r.root === root) ?? null;
 
 const sepOf = (root: string) => (root.includes("\\") ? "\\" : "/");
 const norm = (p: string) => p.replace(/\\/g, "/");
@@ -18,45 +20,97 @@ const norm = (p: string) => p.replace(/\\/g, "/");
 export const isInRepo = (root: string, path: string) => norm(path).startsWith(norm(root) + "/");
 export const joinPath = (root: string, rel: string) => root + sepOf(root) + rel.split("/").join(sepOf(root));
 
+/** The open repository a file belongs to (the innermost one, for a repository inside another). */
+export function repoOf(path: string): RepoInfo | null {
+  let best: RepoInfo | null = null;
+  for (const r of useGit.getState().repos) if (isInRepo(r.root, path) && (!best || r.root.length > best.root.length)) best = r;
+  return best;
+}
+
+/** Makes a repository the current one (status bar, git menu). */
+export const activateRepo = (root: string) => useGit.setState({ activeRoot: root });
+
+/** The current repository follows the active tab. */
+export function followActiveTab() {
+  let last = "";
+  useTabs.subscribe((s) => {
+    const tab = s.tabs.find((t) => t.id === s.activeId);
+    const key = `${s.activeId}|${tab?.path ?? ""}`;
+    if (key === last) return;
+    last = key;
+    const repo = tab?.path ? repoOf(tab.path) : null;
+    if (repo) activateRepo(repo.root);
+  });
+}
+
 // ---------------------------------------------------------------- opening
 
 export async function openRepoFolder() {
-  const dir = await pickFolder({ directory: true, multiple: false, title: "Open Repository (any folder inside a git repository)" });
-  if (typeof dir === "string") await openRepo(dir);
+  const dirs = await pickFolder({ directory: true, multiple: true, title: "Open Repository (any folder inside a git repository)" });
+  for (const dir of dirs ?? []) await openRepo(dir);
 }
 
 export async function openRepo(path: string) {
   try {
     const repo = await git.open(path);
-    setRepo(repo);
-    useSettings.getState().update({ repoRoot: repo.root, sidebar: true });
-    setSync("idle");
-    await syncNow(true);
+    addRepo(repo);
+    const s = useSettings.getState();
+    s.update({
+      repos: s.repos.includes(repo.root) ? s.repos : [...s.repos, repo.root],
+      collapsed: s.collapsed.filter((c) => c !== `repo:${repo.root}`),
+      sidebar: true,
+    });
+    activateRepo(repo.root);
+    await syncNow(true, repo.root);
   } catch (e) {
     notify(String(e), "error");
   }
 }
 
-function setRepo(repo: RepoInfo | null) {
-  useGit.setState((s) => ({ repo, treeVersion: s.treeVersion + 1 }));
+/** Adds a repository, or updates it if it is already open. */
+function addRepo(repo: RepoInfo) {
+  useGit.setState((s) => ({
+    repos: s.repos.some((r) => r.root === repo.root) ? s.repos.map((r) => (r.root === repo.root ? repo : r)) : [...s.repos, repo],
+    treeVersion: s.treeVersion + 1,
+  }));
 }
 
-export function closeRepo() {
-  setRepo(null);
-  setSync("idle");
-  useSettings.getState().update({ repoRoot: null });
+/** New state of an open repository; ignored if it was closed meanwhile. */
+function updateRepo(repo: RepoInfo, reloadTree: boolean) {
+  useGit.setState((s) => ({
+    repos: s.repos.map((r) => (r.root === repo.root ? repo : r)),
+    treeVersion: s.treeVersion + (reloadTree ? 1 : 0),
+  }));
 }
 
-/** On launch: reopen the repository that was open last time. */
-export async function restoreRepo() {
-  const root = useSettings.getState().repoRoot;
-  if (!root) return;
-  try {
-    setRepo(await git.open(root));
-    void syncNow(true);
-  } catch {
-    useSettings.getState().update({ repoRoot: null }); // moved or deleted
+export function closeRepo(root: string) {
+  useGit.setState((s) => {
+    const { [root]: _, ...syncs } = s.syncs;
+    return {
+      repos: s.repos.filter((r) => r.root !== root),
+      activeRoot: s.activeRoot === root ? null : s.activeRoot,
+      syncs,
+      treeVersion: s.treeVersion + 1,
+    };
+  });
+  const s = useSettings.getState();
+  s.update({ repos: s.repos.filter((r) => r !== root), collapsed: s.collapsed.filter((c) => c !== `repo:${root}`) });
+}
+
+/** On launch: reopen the repositories that were open last time. */
+export async function restoreRepos() {
+  for (const root of useSettings.getState().repos) {
+    try {
+      addRepo(await git.open(root));
+      void syncNow(true, root);
+    } catch {
+      closeRepo(root); // moved or deleted
+    }
   }
+  const { tabs, activeId } = useTabs.getState();
+  const path = tabs.find((t) => t.id === activeId)?.path;
+  const repo = path ? repoOf(path) : null;
+  if (repo) activateRepo(repo.root);
 }
 
 export function openDialog(dialog: Dialog) {
@@ -97,49 +151,51 @@ function accountFor(repo: RepoInfo): Account | undefined {
 
 /** Branches the user chose to keep committing to even though the server refuses pushes (this session). */
 const keepRejected = new Set<string>();
-export const keepCommittingTo = (branch: string) => keepRejected.add(branch);
+export const keepCommittingTo = (root: string, branch: string) => keepRejected.add(`${root}\n${branch}`);
 
-function failed(e: unknown) {
+function failed(root: string, e: unknown) {
+  if (!repoAt(root)) return; // closed meanwhile
   const msg = String(e);
   if (msg.startsWith("PUSH_REJECTED:")) {
     const rest = msg.slice("PUSH_REJECTED:".length);
     const cut = rest.indexOf(":");
     const branch = rest.slice(0, cut);
     const reason = rest.slice(cut + 1);
-    setSync("error", `The server doesn't accept pushes to ${branch}. Your commits are kept locally.`);
-    if (!keepRejected.has(branch)) openDialog({ kind: "pushRejected", branch, reason });
+    setSync(root, "error", `The server doesn't accept pushes to ${branch}. Your commits are kept locally.`);
+    if (!keepRejected.has(`${root}\n${branch}`)) openDialog({ kind: "pushRejected", root, branch, reason });
   } else if (msg.startsWith("AUTH_REQUIRED:")) {
     const host = msg.slice("AUTH_REQUIRED:".length);
-    setSync("auth", `Sign in to ${host || "the git server"} to sync`);
+    setSync(root, "auth", `Sign in to ${host || "the git server"} to sync`);
     openDialog({ kind: "accounts", host });
   } else {
-    setSync("error", msg);
+    setSync(root, "error", msg);
   }
 }
 
 async function runSync(root: string, quiet: boolean) {
-  setSync("syncing", "Syncing…");
+  if (!repoAt(root)) return; // closed while waiting in the queue
+  setSync(root, "syncing", "Syncing…");
   try {
     const r: SyncResult = await git.sync(root);
-    useGit.setState((s) => ({ repo: r.info, treeVersion: s.treeVersion + (r.state === "pulled" || r.state === "merged" ? 1 : 0) }));
+    updateRepo(r.info, r.state === "pulled" || r.state === "merged");
     if (r.state === "conflict") {
-      setSync("conflict", r.message, r.conflicts);
-      notify(`${r.message} Conflicts: ${r.conflicts.join(", ")}`, "error");
+      setSync(root, "conflict", r.message, r.conflicts);
+      notify(`${r.info.name}: ${r.message} Conflicts: ${r.conflicts.join(", ")}`, "error");
     } else {
-      setSync(r.state === "local-only" ? "local" : "synced", r.message);
+      setSync(root, r.state === "local-only" ? "local" : "synced", r.message);
       if (r.state === "pulled" || r.state === "merged") {
         await checkExternalChanges(); // open tabs pick up the downloaded files
-        if (!quiet) notify(r.message);
+        if (!quiet) notify(`${r.info.name}: ${r.message}`);
       }
     }
   } catch (e) {
-    failed(e);
+    failed(root, e);
   }
 }
 
-/** Sync the open repository with its remote (fetch, merge if needed, push). */
-export function syncNow(quiet = false) {
-  const repo = useGit.getState().repo;
+/** Sync a repository (default: the current one) with its remote (fetch, merge if needed, push). */
+export function syncNow(quiet = false, root = current()?.root) {
+  const repo = root ? repoAt(root) : null;
   if (!repo) {
     if (!quiet) notify("Open a repository first (File → Open Repository…)");
     return Promise.resolve();
@@ -147,50 +203,52 @@ export function syncNow(quiet = false) {
   return enqueue(() => runSync(repo.root, quiet));
 }
 
-/** Called after a file was saved: commit it and push, when it belongs to the open repository. */
+/** Called after a file was saved: commit it and push, when it belongs to an open repository. */
 export function afterSave(path: string) {
-  const { repo } = useGit.getState();
-  const settings = useSettings.getState();
-  if (!repo || !settings.autoCommit || !isInRepo(repo.root, path)) return;
+  const repo = repoOf(path);
+  if (!repo || !useSettings.getState().autoCommit) return;
   void enqueue(async () => {
     try {
-      setSync("syncing", "Committing…");
+      setSync(repo.root, "syncing", "Committing…");
       const message = await git.commitFile(repo.root, path, accountFor(repo)?.username ?? null);
-      if (message === null && (useGit.getState().repo?.ahead ?? 0) === 0) {
-        setSync("synced", "Nothing to commit");
+      if (message === null && (repoAt(repo.root)?.ahead ?? 0) === 0) {
+        setSync(repo.root, "synced", "Nothing to commit");
         return;
       }
       useGit.setState((s) => ({ treeVersion: s.treeVersion + 1 }));
       await runSync(repo.root, true);
     } catch (e) {
-      failed(e);
+      failed(repo.root, e);
     }
   });
 }
 
 /** Called after a file or folder was moved to the Trash: commit the removal and push, when it was in the repository. */
 export function afterDelete(path: string) {
-  const { repo } = useGit.getState();
-  if (!repo || !useSettings.getState().autoCommit || !isInRepo(repo.root, path)) return;
+  const repo = repoOf(path);
+  if (!repo || !useSettings.getState().autoCommit) return;
   void enqueue(async () => {
     try {
-      setSync("syncing", "Committing…");
+      setSync(repo.root, "syncing", "Committing…");
       const message = await git.commitRemoval(repo.root, path, accountFor(repo)?.username ?? null);
-      if (message === null && (useGit.getState().repo?.ahead ?? 0) === 0) {
-        setSync("synced", "Nothing to commit");
+      if (message === null && (repoAt(repo.root)?.ahead ?? 0) === 0) {
+        setSync(repo.root, "synced", "Nothing to commit");
         return;
       }
       await runSync(repo.root, true);
     } catch (e) {
-      failed(e);
+      failed(repo.root, e);
     }
   });
 }
 
-/** Sync when the window comes back to the front, at most every two minutes. */
+/** Sync when the window comes back to the front, each repository at most every two minutes. */
 export function syncOnFocus() {
-  const { repo, sync } = useGit.getState();
-  if (repo && sync.state !== "syncing" && Date.now() - sync.at > 120_000) void syncNow(true);
+  const { repos, syncs } = useGit.getState();
+  for (const { root } of repos) {
+    const sync = syncs[root];
+    if (sync?.state !== "syncing" && Date.now() - (sync?.at ?? 0) > 120_000) void syncNow(true, root);
+  }
 }
 
 // ---------------------------------------------------------------- opening files from the tree
@@ -199,41 +257,36 @@ export const openRepoFile = (root: string, rel: string) => openFiles([joinPath(r
 
 // ---------------------------------------------------------------- branches
 
-function afterBranchChange(info: RepoInfo) {
-  setRepo(info);
-  useSettings.getState().update({ repoRoot: info.root });
-}
-
 /** Switches branch. Files on disk change; open tabs pick that up (unsaved edits get a banner). */
-export function switchBranch(name: string) {
-  const repo = useGit.getState().repo;
+export function switchBranch(root: string, name: string) {
+  const repo = repoAt(root);
   if (!repo) return Promise.resolve();
   return enqueue(async () => {
     try {
-      afterBranchChange(await git.switchBranch(repo.root, name));
+      updateRepo(await git.switchBranch(repo.root, name), true);
       await checkExternalChanges();
       notify(`Switched to ${name}`);
     } catch (e) {
       notify(String(e), "error");
     }
-  }).then(() => syncNow(true));
+  }).then(() => syncNow(true, root));
 }
 
 /** Creates a branch from the current commit, switches to it and publishes it on the remote. */
-export async function createBranch(name: string) {
-  const repo = useGit.getState().repo;
+export async function createBranch(root: string, name: string) {
+  const repo = repoAt(root);
   if (!repo) return;
-  afterBranchChange(await git.createBranch(repo.root, name.trim()));
+  updateRepo(await git.createBranch(repo.root, name.trim()), true);
   notify(`Created branch ${name.trim()}`);
-  void syncNow(true);
+  void syncNow(true, root);
 }
 
 /** Moves the commits the server refused onto a new branch, then pushes that branch. */
-export async function moveToNewBranch(name: string) {
-  const repo = useGit.getState().repo;
+export async function moveToNewBranch(root: string, name: string) {
+  const repo = repoAt(root);
   if (!repo) return;
-  afterBranchChange(await git.moveToBranch(repo.root, name.trim()));
-  await syncNow(true);
+  updateRepo(await git.moveToBranch(repo.root, name.trim()), true);
+  await syncNow(true, root);
 }
 
 function providerOf(repo: RepoInfo) {
@@ -247,26 +300,26 @@ function providerOf(repo: RepoInfo) {
 }
 
 /** Address of the page for opening a pull request from the current branch, if that makes sense. */
-export function pullRequestLink(repo = useGit.getState().repo): string | null {
+export function pullRequestLink(repo: RepoInfo | null): string | null {
   if (!repo?.remoteUrl || !repo.branch || !repo.defaultBranch || repo.branch === repo.defaultBranch) return null;
   return pullRequestUrl(repo.remoteUrl, providerOf(repo), repo.branch, repo.defaultBranch);
 }
 
-export function openPullRequest() {
-  const url = pullRequestLink();
+export function openPullRequest(root: string) {
+  const url = pullRequestLink(repoAt(root));
   if (url) void git.openExternal(url);
 }
 
 /** Native menu with the branches, from the sidebar header or the status bar. */
-export async function showBranchMenu() {
-  const repo = useGit.getState().repo;
+export async function showBranchMenu(root = current()?.root) {
+  const repo = root ? repoAt(root) : null;
   if (!repo) return;
   const branches = await git.branches(repo.root).catch(() => []);
   const item = (b: (typeof branches)[number]) => ({
     id: `branch-${b.name}`,
     text: b.name,
     checked: b.current,
-    action: () => void (b.current ? undefined : switchBranch(b.name)),
+    action: () => void (b.current ? undefined : switchBranch(repo.root, b.name)),
   });
   const local = branches.filter((b) => b.local);
   const remoteOnly = branches.filter((b) => !b.local);
@@ -277,16 +330,16 @@ export async function showBranchMenu() {
         ? [{ id: "remote-branches", text: "Remote Branches", items: remoteOnly.map(item) }]
         : []),
       { item: "Separator" as const },
-      { id: "new-branch", text: "New Branch…", action: () => openDialog({ kind: "newBranch" }) },
+      { id: "new-branch", text: "New Branch…", action: () => openDialog({ kind: "newBranch", root: repo.root }) },
       {
         id: "pull-request",
         text: repo.defaultBranch ? `Create Pull Request into ${repo.defaultBranch}…` : "Create Pull Request…",
         enabled: !!pullRequestLink(repo),
-        action: openPullRequest,
+        action: () => openPullRequest(repo.root),
       },
-      { id: "sync", text: "Sync Now", action: () => void syncNow() },
+      { id: "sync", text: "Sync Now", action: () => void syncNow(false, repo.root) },
       { item: "Separator" as const },
-      { id: "close-repo", text: "Close Repository", action: closeRepo },
+      { id: "close-repo", text: "Close Repository", action: () => closeRepo(repo.root) },
     ],
   });
   await menu.popup();

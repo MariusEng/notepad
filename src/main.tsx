@@ -28,14 +28,15 @@ import { openSaveAsPicker, openTypePicker } from "./TypePicker";
 import {
   openDialog,
   openRepoFolder,
-  restoreRepo,
+  followActiveTab,
+  restoreRepos,
   showBranchMenu,
   syncNow,
   syncOnFocus,
   toggleAutoCommit,
   toggleSidebar,
 } from "./git/actions";
-import { openFolder, restoreFolder } from "./sidebar/actions";
+import { openFolder, restoreFolders } from "./sidebar/actions";
 import { activeEditor } from "./editors/handle";
 import { startUnloading } from "./tabs/unload";
 import { backend } from "./lib/backend";
@@ -145,8 +146,9 @@ async function start() {
   await restoreSession();
   startSessionAutosave();
   startUnloading();
-  void restoreRepo();
-  void restoreFolder();
+  followActiveTab();
+  void restoreRepos();
+  void restoreFolders();
 
   const win = getCurrentWindow();
   // Closing the window quits the app; save the session first (the handler is awaited).

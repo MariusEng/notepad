@@ -2,17 +2,18 @@ import { setLanguage, showEncodingMenu, toggleEol, toggleSource } from "./action
 import { encodingName } from "./editors/encodings";
 import { LANGUAGE_LIST, type LanguageId } from "./editors/languages";
 import { useTabs } from "./tabs/store";
-import { useGit } from "./git/store";
+import { currentRepo, syncOf, useGit } from "./git/store";
 import { showBranchMenu, syncNow, toggleSidebar } from "./git/actions";
 import { useSettings } from "./settings";
 import { revealProblem, useValidation } from "./editors/validation";
 import { UpdateStatus } from "./updates";
 import { MacroStatus } from "./editors/macro";
 
-/** Branch (click: branch menu) and sync state (click: sync now) of the open repository. */
+/** Branch (click: branch menu) and sync state (click: sync now) of the current repository. */
 function RepoStatus() {
-  const repo = useGit((s) => s.repo);
-  const sync = useGit((s) => s.sync);
+  const repo = useGit(currentRepo);
+  const several = useGit((s) => s.repos.length > 1);
+  const sync = useGit(syncOf(repo?.root));
   if (!repo) return null;
   const icon = { idle: "↻", syncing: "↻", synced: "✓", local: "", error: "!", conflict: "⚠", auth: "⚠" }[sync.state];
   const counts = `${repo.ahead ? `↑${repo.ahead} ` : ""}${repo.behind ? `↓${repo.behind} ` : ""}`;
@@ -20,6 +21,7 @@ function RepoStatus() {
   return (
     <>
       <button className="sb-item sb-btn" title="Switch or create a branch" onClick={() => void showBranchMenu()}>
+        {several ? `${repo.name}: ` : ""}
         {repo.branch ?? "(no branch)"}
       </button>
       {(icon || counts) && (
@@ -38,10 +40,10 @@ function RepoStatus() {
 
 /** Shown only while a repository or folder is open and the sidebar is hidden. */
 function SidebarToggle() {
-  const repo = useGit((s) => s.repo);
-  const folder = useSettings((s) => s.folderRoot);
+  const repos = useGit((s) => s.repos.length);
+  const folders = useSettings((s) => s.folders.length);
   const visible = useSettings((s) => s.sidebar);
-  if ((!repo && !folder) || visible) return null;
+  if ((!repos && !folders) || visible) return null;
   return (
     <button className="sb-item sb-btn sb-icon" title="Show sidebar (⇧⌘E · Ctrl+Shift+E)" aria-label="Show sidebar" onClick={toggleSidebar}>
       <svg viewBox="0 0 16 16" aria-hidden>

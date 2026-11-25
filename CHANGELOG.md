@@ -2,6 +2,13 @@
 
 The main changes in each version, newest first.
 
+## 0.21.0 — 2026-11-25
+
+- **Several folders and repositories** in the sidebar, each a section you can collapse, with an × to close it. Saving commits to the repository the file belongs to; the status bar follows the active tab.
+- The sidebar can be **resized**: drag its right edge (double-click for the default width).
+- Right-click → **New File** has a submenu with the file types, including SQLite databases.
+- Markdown: empty paragraphs are no longer saved as `<br />`, and text or images directly below a `<br />` line show properly instead of as plain text.
+
 ## 0.20.0 — 2026-11-24
 
 - macOS: updates no longer ask for keychain access. Git sign-ins are now kept in the keychain through Apple's own tool, so they don't depend on Notepad's version. After this update macOS asks one last time while Notepad moves your sign-ins over.
