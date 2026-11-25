@@ -39,7 +39,7 @@ import {
 import { openFolder, restoreFolders } from "./sidebar/actions";
 import { activeEditor } from "./editors/handle";
 import { startUnloading } from "./tabs/unload";
-import { backend } from "./lib/backend";
+import { backend, type OpenRequest } from "./lib/backend";
 import { useTabs } from "./tabs/store";
 import {
   checkExternalChanges,
@@ -130,6 +130,11 @@ async function installCli() {
   }
 }
 
+/** A preview shows an existing file only; other requests may name a file that saving creates. */
+async function openRequested(files: OpenRequest[]) {
+  for (const { path, preview } of files) await openFiles([path], preview ? { preview: true } : { create: true });
+}
+
 async function start() {
   await loadSettings();
 
@@ -138,7 +143,7 @@ async function start() {
 
   // Files opened from Finder/Explorer, the command line, or dropped onto the window.
   // (`create`: `notepad new.md` from a terminal opens a file that doesn't exist yet.)
-  listen("open-files", async () => openFiles(await backend.takePendingOpen(), { create: true }));
+  listen("open-files", async () => openRequested(await backend.takePendingOpen()));
   getCurrentWebview().onDragDropEvent((e) => {
     if (e.payload.type === "drop") openFiles(e.payload.paths);
   });
@@ -164,7 +169,7 @@ async function start() {
   });
 
   const pending = await backend.takePendingOpen();
-  if (pending.length) await openFiles(pending, { create: true });
+  await openRequested(pending);
   if (useTabs.getState().tabs.length === 0) newTab();
 
   createRoot(document.getElementById("root")!).render(<App />);

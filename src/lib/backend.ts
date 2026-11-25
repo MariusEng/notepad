@@ -101,6 +101,12 @@ async function readText(
   return content === null ? null : { ...base, content, lossy: true };
 }
 
+/** A file another program or the command line asked to open (`--preview`: in the preview tab). */
+export interface OpenRequest {
+  path: string;
+  preview: boolean;
+}
+
 export const backend = {
   readFile: async (path: string, encoding: string | null = null) => (await readText(path, undefined, encoding))!,
   readText,
@@ -113,7 +119,7 @@ export const backend = {
   writeBuffer: (id: string, content: string) => invoke<void>("write_buffer", { id, content }),
   readBuffer: (id: string) => invoke<string | null>("read_buffer", { id }),
   pruneBuffers: (keep: string[]) => invoke<void>("prune_buffers", { keep }),
-  takePendingOpen: () => invoke<string[]>("take_pending_open"),
+  takePendingOpen: () => invoke<OpenRequest[]>("take_pending_open"),
   quit: () => invoke<void>("quit_app"),
   /** macOS: puts the `notepad` command in /usr/local/bin (asks for an admin password if needed). Resolves to its path. */
   installCli: () => invoke<string>("install_cli"),

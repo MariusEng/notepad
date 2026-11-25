@@ -6,11 +6,11 @@
 
 /// The installed command. `--args` reaches the app as argv (`files_from_args`), also for files that don't exist yet.
 pub const SCRIPT: &str = r#"#!/bin/sh
-# notepad [file…]: opens files in Notepad. Installed by Notepad → Install Command Line Tool…
+# notepad [--preview] [file…]: opens files in Notepad. Installed by Notepad → Install Command Line Tool…
 for f do
   shift
   case "$f" in
-    /*) ;;
+    /*|--preview) ;;
     *) f="$PWD/$f" ;;
   esac
   set -- "$@" "$f"

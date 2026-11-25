@@ -31,7 +31,15 @@ mod git_tests;
 
 /// Files the OS asked us to open before the frontend was ready to receive them.
 #[derive(Default)]
-struct PendingOpen(Mutex<Vec<String>>);
+struct PendingOpen(Mutex<Vec<OpenRequest>>);
+
+/// A file another program (or the command line) asked to open.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+struct OpenRequest {
+    path: String,
+    /// `--preview`: in the preview tab, which the next preview replaces.
+    preview: bool,
+}
 
 /// Set once the frontend has flushed the session and confirmed it is safe to quit.
 static QUIT_CONFIRMED: AtomicBool = AtomicBool::new(false);
@@ -216,7 +224,7 @@ fn prune_buffers(app: AppHandle, keep: Vec<String>) -> Result<(), String> {
 // ---------- OS integration ----------
 
 #[tauri::command]
-fn take_pending_open(state: State<PendingOpen>) -> Vec<String> {
+fn take_pending_open(state: State<PendingOpen>) -> Vec<OpenRequest> {
     std::mem::take(&mut *state.0.lock().unwrap())
 }
 
@@ -360,7 +368,14 @@ mod tests {
             &d,
         );
         let missing = d.join("missing.md").to_string_lossy().into_owned();
-        assert_eq!(got, vec![abs.clone(), missing, abs]);
+        let req = |path: &str, preview| OpenRequest { path: path.to_string(), preview };
+        assert_eq!(got, vec![req(&abs, false), req(&missing, false), req(&abs, false)]);
+        // --preview, before or after the file; only for a single file.
+        let args = |a: &[&str]| files_from_args(a.iter().map(|s| s.to_string()), &d);
+        assert_eq!(args(&["--preview", "a.md"]), vec![req(&abs, true)]);
+        assert_eq!(args(&["a.md", "--preview"]), vec![req(&abs, true)]);
+        assert_eq!(args(&["--preview", "a.md", "missing.md"]), vec![req(&abs, false), req(&missing, false)]);
+        assert_eq!(args(&["--preview"]), vec![]);
         let _ = std::fs::remove_dir_all(&d);
     }
 
@@ -571,14 +586,22 @@ fn build_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
 /// The files among command-line arguments (options skipped), as absolute paths. Relative ones are resolved against
 /// `cwd`: for a second launch that is the folder it was started in, not the running app's.
-fn files_from_args(args: impl IntoIterator<Item = String>, cwd: &Path) -> Vec<String> {
-    args.into_iter()
+/// `--preview` opens a single file in the preview tab (several files open as normal tabs).
+fn files_from_args(args: impl IntoIterator<Item = String>, cwd: &Path) -> Vec<OpenRequest> {
+    let args: Vec<String> = args.into_iter().collect();
+    let preview = args.iter().any(|a| a == "--preview");
+    let mut files: Vec<OpenRequest> = args
+        .into_iter()
         .filter(|a| !a.starts_with('-'))
         .map(|a| cwd.join(a)) // join keeps an absolute path as it is
         // A file that doesn't exist yet (`notepad new.md`) opens as an empty tab that saving creates; its folder must exist.
         .filter(|p| p.is_file() || (!p.exists() && p.parent().is_some_and(|d| d.is_dir())))
-        .map(|p| p.to_string_lossy().into_owned())
-        .collect()
+        .map(|p| OpenRequest { path: p.to_string_lossy().into_owned(), preview: false })
+        .collect();
+    if let [file] = files.as_mut_slice() {
+        file.preview = preview;
+    }
+    files
 }
 
 /// Restore size, position and maximised state, but not visibility: the window
@@ -732,10 +755,10 @@ pub fn run() {
         }
         #[cfg(any(target_os = "macos", target_os = "ios"))]
         RunEvent::Opened { urls } => {
-            let paths: Vec<String> = urls
+            let paths: Vec<OpenRequest> = urls
                 .iter()
                 .filter_map(|u| u.to_file_path().ok())
-                .map(|p| p.to_string_lossy().into_owned())
+                .map(|p| OpenRequest { path: p.to_string_lossy().into_owned(), preview: false })
                 .collect();
             app.state::<PendingOpen>().0.lock().unwrap().extend(paths);
             // The frontend responds by calling take_pending_open.

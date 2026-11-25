@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.22.0 — 2026-11-25
+
+- `notepad --preview file` opens a file in the preview tab (italic title), which the next preview replaces. Made for other programs, such as file managers. On macOS, run **Install Command Line Tool…** again to use it from a terminal.
+
 ## 0.21.1 — 2026-11-25
 
 - macOS: after an update, Notepad starts on its pinned Dock icon. The new version now waits until the old one has quit; before, both ran for a moment and the Dock added a second icon. Takes effect from the update after this one.

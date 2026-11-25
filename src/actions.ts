@@ -121,7 +121,7 @@ async function saveDbAs(tab: Tab): Promise<boolean> {
 }
 
 export interface OpenOptions {
-  /** Single click in the sidebar: open as a preview tab that the next preview replaces. */
+  /** Single click in the sidebar, or `--preview` on the command line: open as a preview tab that the next preview replaces. */
   preview?: boolean;
   /** Double click in the sidebar: keep the tab open (also turns an open preview tab into a normal one). */
   pin?: boolean;
