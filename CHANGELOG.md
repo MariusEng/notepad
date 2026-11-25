@@ -2,6 +2,10 @@
 
 The main changes in each version, newest first.
 
+## 0.21.1 — 2026-11-25
+
+- macOS: after an update, Notepad starts on its pinned Dock icon. The new version now waits until the old one has quit; before, both ran for a moment and the Dock added a second icon. Takes effect from the update after this one.
+
 ## 0.21.0 — 2026-11-25
 
 - **Several folders and repositories** in the sidebar, each a section you can collapse, with an × to close it. Saving commits to the repository the file belongs to; the status bar follows the active tab.

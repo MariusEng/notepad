@@ -61,16 +61,44 @@ pub async fn update_install(app: AppHandle, pending: State<'_, Pending>) -> Resu
     #[cfg(target_os = "macos")]
     {
         match install_in_place(&bytes, &app.config().identifier) {
-            Ok(()) => {
-                app.restart();
-            }
+            Ok(()) => return restart_after_exit(&app),
             // Not writable (e.g. installed by an administrator) or anything unexpected: the plugin's way, which can
             // ask for an administrator password.
             Err(e) => eprintln!("[notepad] in-place update failed, using the updater's install: {e}"),
         }
     }
     update.install(bytes).map_err(|e| e.to_string())?;
+    #[cfg(target_os = "macos")]
+    return restart_after_exit(&app);
+    #[cfg(not(target_os = "macos"))]
     app.restart();
+}
+
+/// Quits, and starts the app again once this process is gone. Tauri's restart runs `open -n` while the old copy is
+/// still running; with two copies at once the Dock gives the new one its own tile instead of the pinned one.
+#[cfg(target_os = "macos")]
+fn restart_after_exit(app: &AppHandle) -> Result<(), String> {
+    relaunch_when_gone(std::process::id(), "/usr/bin/open", &current_bundle()?)?;
+    app.exit(0);
+    Ok(())
+}
+
+/// A detached helper: waits (at most 30 s) until `pid` is gone, then runs `<opener> <bundle>`.
+#[cfg(target_os = "macos")]
+fn relaunch_when_gone(pid: u32, opener: &str, bundle: &std::path::Path) -> Result<(), String> {
+    use std::os::unix::process::CommandExt;
+    use std::process::{Command, Stdio};
+    const WAIT: &str = r#"n=0; while kill -0 "$1" 2>/dev/null && [ $n -lt 300 ]; do sleep 0.1; n=$((n+1)); done; sleep 0.5; exec "$2" "$3""#;
+    Command::new("/bin/sh")
+        .args(["-c", WAIT, "notepad-restart", &pid.to_string(), opener])
+        .arg(bundle)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .process_group(0)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("can't restart: {e}"))
 }
 
 /// The running app's bundle: …/Notepad.app (from …/Notepad.app/Contents/MacOS/notepad).
@@ -201,6 +229,25 @@ mod tests {
 
 #[cfg(all(test, target_os = "macos"))]
 mod real_update_test {
+    #[test]
+    fn relaunches_only_after_the_old_process_is_gone() {
+        use std::time::{Duration, Instant};
+        let dir = tempfile::tempdir().unwrap();
+        let mark = dir.path().join("a folder with spaces");
+        let mut old = std::process::Command::new("/bin/sleep").arg("30").spawn().unwrap();
+        // "touch" stands in for "open".
+        super::relaunch_when_gone(old.id(), "/usr/bin/touch", &mark).unwrap();
+        std::thread::sleep(Duration::from_millis(1200));
+        assert!(!mark.exists(), "started while the old process was running");
+        old.kill().unwrap();
+        old.wait().unwrap();
+        let t = Instant::now();
+        while !mark.exists() && t.elapsed() < Duration::from_secs(5) {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        assert!(mark.exists(), "never started again");
+    }
+
     /// NOTEPAD_REAL_UPDATE_TEST=<app.tar.gz>:<installed .app copy> runs the swap on real files (not run by default).
     #[test]
     fn real_files() {
