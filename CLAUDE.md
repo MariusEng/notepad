@@ -48,6 +48,9 @@ the features, shortcuts and file layout.
   Keep these in sync: `package.json`, `package-lock.json` (top two entries),
   `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (the `notepad` entry).
   Put the bump in the same commit as the change.
+  Exception: pushes that only touch root *.md, LICENSE, .gitignore/.dockerignore, .forgejo/, scripts/ or ci/ don't
+  run the release workflow (`paths-ignore` in release.yml, 2026-11-26, user request), so don't bump for those: a
+  bump in package.json would build and release an unchanged app.
 - **Add the version to `CHANGELOG.md`** in the same commit (newest first, `## X.Y.Z — date`, user-facing main
   changes; build-only patches can be skipped or one line). Releases use it: the Forgejo release notes are that
   version's section and the deling.1011.no/notepad page shows the whole changelog (`scripts/release-notes.sh`).

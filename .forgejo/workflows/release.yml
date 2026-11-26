@@ -1,10 +1,12 @@
 # Builds Notepad for Linux (Docker runner) and for macOS and Windows (Mac runner), and publishes a release when all
 # three are green.
 #
-#  - Every push to main builds both. If both succeed and there is no release yet for the version in package.json,
-#    the `release` job creates release v<version> (tagging the built commit) with the installers attached and the
-#    commit titles since the previous release as notes. Same version as an existing release (e.g. a docs-only
-#    push): it builds, but publishes nothing.
+#  - Every push to main that changes the app builds all three. A push that only touches docs (Markdown files in the
+#    repository root), workflows (.forgejo/), scripts/, ci/ or other repository files listed under paths-ignore
+#    doesn't run this workflow at all (src/help.md is part of the app, so it still builds). If the builds succeed
+#    and there is no release yet for the version in package.json, the `release` job creates release v<version>
+#    (tagging the built commit) with the installers attached and the version's CHANGELOG.md section as notes.
+#    Same version as an existing release: it builds, but publishes nothing.
 #  - Pushing a tag by hand (git tag v0.12.0 && git push origin v0.12.0) builds that commit and attaches the files to
 #    that tag's release.
 #  - Actions → release → Run workflow: builds only (download the files from the run's artifacts).
@@ -25,6 +27,16 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+    # Changes that don't affect the app. A push is skipped only when EVERY changed file matches (across all its
+    # commits). Tag pushes ignore this filter. `*` doesn't cross `/`, so "*.md" is only the root (not src/help.md).
+    paths-ignore:
+      - "*.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".dockerignore"
+      - ".forgejo/**"
+      - "scripts/**"
+      - "ci/**"
   workflow_dispatch:
 
 env:
